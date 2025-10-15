@@ -1,4 +1,4 @@
-from base import Message
+from base import MESSAGE
 
 class Challenge(object):
 	"""docstring for Challenge"""
