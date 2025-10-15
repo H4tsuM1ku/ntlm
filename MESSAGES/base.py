@@ -22,7 +22,7 @@ class WORKSTATIONFIELDS(object):
 	def __init__(self, workstation_name, offset=0):
 		self.WorkstationLen = struct.pack(">H", len(workstation_name))
 		self.WorkstationMaxLen = self.WorkstationLen
-		self.WorkstationBufferOffset = struct.pack(">I", 0+offset+1)
+		self.WorkstationBufferOffset = struct.pack(">I", 0+offset)
 
 	def to_bytes(self):
 		values = [getattr(self, attr) for attr in vars(self)]

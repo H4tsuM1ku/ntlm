@@ -1,7 +1,6 @@
-from base import MESSAGE
+from .base import MESSAGE
 
-class Challenge(object):
-	"""docstring for Challenge"""
-	def __init__(self, arg):
-		super(Challenge, self).__init__()
-		self.arg = arg
+class CHALLENGE(object):
+	"""docstring for CHALLENGE"""
+	def __init__(self):
+		super(CHALLENGE, self).__init__()
