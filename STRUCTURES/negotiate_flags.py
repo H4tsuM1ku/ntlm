@@ -1,5 +1,6 @@
-from enum import IntFlag, auto
 from ntlm.constants import *
+from enum import IntFlag, auto
+from functools import cached_property
 import struct
 
 class NEGOTIATE_FLAGS(IntFlag):
@@ -173,13 +174,10 @@ class NEGOTIATE_FLAGS(IntFlag):
 	NEGOTIATE_OEM						= NTLMSSP_NEGOTIATE_OEM
 	NEGOTIATE_UNICODE					= NTLMSSP_NEGOTIATE_UNICODE
 
-	def __init__(self, value):
-		super().__init__(value)
-		self.packed_flags = None
-
 	@property
 	def pack(self):
-		if self.packed_flags is None:
-			self.packed_flags = {flag.name: (1 if flag & self else 0) for flag in NEGOTIATE_FLAGS}
+		return struct.pack("<I", self)
 
-		return struct.pack(">I", self)
+	@cached_property
+	def dict(self):
+		return {flag.name: (1 if flag & self else 0) for flag in NEGOTIATE_FLAGS}

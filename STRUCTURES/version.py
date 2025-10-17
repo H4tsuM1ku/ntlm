@@ -33,7 +33,7 @@ class VERSION(object):
 	def __init__(self, major_version, minor_version, build):
 		self.ProductMajorVersion = struct.pack('B', major_version)
 		self.ProductMinorVersion = struct.pack('B', minor_version)
-		self.ProductBuild = struct.pack('>H', build)
+		self.ProductBuild = struct.pack('<H', build)
 		self.Reserved = struct.pack('BBB', 0x0, 0x0, 0x0)
 		self.NTLMRevisionCurrent = struct.pack('B', 0xF)
 

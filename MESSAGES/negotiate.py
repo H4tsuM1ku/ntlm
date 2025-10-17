@@ -1,6 +1,6 @@
 from .base import MESSAGE, DOMAIN_NAME_FIELDS, WORKSTATION_FIELDS
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
 from ntlm.constants import NtLmNegotiate
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
 import struct
 
 class NEGOTIATE(MESSAGE):
@@ -9,7 +9,7 @@ class NEGOTIATE(MESSAGE):
 		super(NEGOTIATE, self).__init__(NtLmNegotiate)
 		self.NegotiateFlags = flags.pack
 
-		match (flags.packed_flags["NEGOTIATE_UNICODE"], flags.packed_flags["NEGOTIATE_OEM"]):
+		match (flags.dict["NEGOTIATE_UNICODE"], flags.dict["NEGOTIATE_OEM"]):
 			case (1, 1) | (1, 0):
 				encoding = "utf-16-le"
 			case (0, 1):
@@ -23,7 +23,7 @@ class NEGOTIATE(MESSAGE):
 		domain_name_length = len(domain_name)
 		workstation_name_length = len(workstation_name)
 
-		match (flags.packed_flags["NEGOTIATE_OEM_WORKSTATION_SUPPLIED"], flags.packed_flags["NEGOTIATE_OEM_DOMAIN_SUPPLIED"]):
+		match (flags.dict["NEGOTIATE_OEM_WORKSTATION_SUPPLIED"], flags.dict["NEGOTIATE_OEM_DOMAIN_SUPPLIED"]):
 			case (1, 1):
 				self.DomainNameFields = DOMAIN_NAME_FIELDS(domain_name).pack()
 				self.WorkstationFields = WORKSTATION_FIELDS(workstation_name, domain_name_length).pack()
@@ -34,14 +34,14 @@ class NEGOTIATE(MESSAGE):
 			case (0, 0):
 				pass
 
-		if flags.packed_flags["NEGOTIATE_VERSION"]:
+		if flags.dict["NEGOTIATE_VERSION"]:
 			self.Version = VERSION(major_version, minor_version, build).pack()
 		
 		if domain_name_length:
-			self.DomainName = struct.pack(f">{domain_name_length}s", domain_name)
+			self.DomainName = struct.pack(f"<{domain_name_length}s", domain_name)
 
 		if workstation_name_length:
-			self.WorkstationName = struct.pack(f">{workstation_name_length}s", workstation_name)
+			self.WorkstationName = struct.pack(f"<{workstation_name_length}s", workstation_name)
 
 	def pack(self):
 		values = [getattr(self, attr) for attr in vars(self)]
