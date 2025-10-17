@@ -1,5 +1,5 @@
 from ntlm.constants import *
-from enum import IntFlag, auto
+from enum import IntFlag
 from functools import cached_property
 import struct
 
@@ -181,3 +181,6 @@ class NEGOTIATE_FLAGS(IntFlag):
 	@cached_property
 	def dict(self):
 		return {flag.name: (1 if flag & self else 0) for flag in NEGOTIATE_FLAGS}
+
+	def clear(self):
+		return NEGOTIATE_FLAGS(0)
