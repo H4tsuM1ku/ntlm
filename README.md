@@ -36,8 +36,6 @@ This project focuses on *parsing, constructing, and serializing* NTLM messages i
 For now, only the Negotiate Message is working theorically... — I haven’t tested it in real communication yet.
 The NEGOTIATE_FLAGS class was improved to be easier to use. (I really love it!).
 
-/!\ Ok maybe NEGOTIATE_FLAGS has some bugs for now and you can't use more than one flag... /!\\.
-
 There is many things to improve, but I’ll focus on that once everything's working. (quiet a liar.. sorry ^^')
 
 ### Example (literally my test.py)
@@ -52,12 +50,12 @@ version_bytes = version.to_bytes()
 print(version_bytes)
 
 # Build negotiate flags
-flags = NEGOTIATE_FLAGS.NEGOTIATE_OEM |\
-        NEGOTIATE_FLAGS.NEGOTIATE_VERSION
-        #| NEGOTIATE_FLAGS.NEGOTIATE_OEM_DOMAIN_SUPPLIED
-        #| NEGOTIATE_FLAGS.NEGOTIATE_OEM
+flags = NEGOTIATE_FLAGS.NEGOTIATE_OEM\
+        | NEGOTIATE_FLAGS.NEGOTIATE_VERSION\
+        | NEGOTIATE_FLAGS.NEGOTIATE_OEM_DOMAIN_SUPPLIED\
+        | NEGOTIATE_FLAGS.NEGOTIATE_OEM
 
-print(flags, dir(flags))
+print(hex(flags), dir(flags), flags.dict)
 
 domain_name = "MIKU.WORLD"
 workstation_name = "Hatsu"
