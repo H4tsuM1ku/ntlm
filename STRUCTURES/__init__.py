@@ -1,7 +1,7 @@
-from .negotiate_flags import NEGOTIATEFLAGS
+from .negotiate_flags import NEGOTIATE_FLAGS
 from .version import VERSION
 
 __all__ = [
-	"NEGOTIATEFLAGS",
+	"NEGOTIATE_FLAGS",
 	"VERSION"
 ]

@@ -1,19 +1,18 @@
-from .base import MESSAGE, DOMAINNAMEFIELDS, WORKSTATIONFIELDS
-from ntlm.STRUCTURES import NEGOTIATEFLAGS, VERSION
+from .base import MESSAGE, DOMAIN_NAME_FIELDS, WORKSTATION_FIELDS
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
+from ntlm.constants import NtLmNegotiate
 import struct
 
 class NEGOTIATE(MESSAGE):
 	"""docstring for NEGOTIATE"""
 	def __init__(self, flags, domain_name="", workstation_name="", major_version=0x0, minor_version=0x0, build=0x0, oem_encoding="cp850"):
-		super(NEGOTIATE, self).__init__(0x000000001)
-		self.NegotiateFlags = NEGOTIATEFLAGS(*flags).to_bytes()
+		super(NEGOTIATE, self).__init__(NtLmNegotiate)
+		self.NegotiateFlags = flags.pack
 
-		match (flags[20], flags[21]):
-			case (1, 1):
+		match (flags.packed_flags["NEGOTIATE_UNICODE"], flags.packed_flags["NEGOTIATE_OEM"]):
+			case (1, 1) | (1, 0):
 				encoding = "utf-16-le"
 			case (0, 1):
-				encoding = "utf-16-le"
-			case (1, 0):
 				encoding = oem_encoding
 			case (0, 0):
 				raise Exception("SEC_E_INVALID_TOKEN: You need to choose a character set encoding")
@@ -24,19 +23,19 @@ class NEGOTIATE(MESSAGE):
 		domain_name_length = len(domain_name)
 		workstation_name_length = len(workstation_name)
 
-		match (flags[11], flags[12]):
+		match (flags.packed_flags["NEGOTIATE_OEM_WORKSTATION_SUPPLIED"], flags.packed_flags["NEGOTIATE_OEM_DOMAIN_SUPPLIED"]):
 			case (1, 1):
-				self.DomainNameFields = DOMAINNAMEFIELDS(domain_name).to_bytes()
-				self.WorkstationFields = WORKSTATIONFIELDS(workstation_name, domain_name_length).to_bytes()
+				self.DomainNameFields = DOMAIN_NAME_FIELDS(domain_name).pack()
+				self.WorkstationFields = WORKSTATION_FIELDS(workstation_name, domain_name_length).pack()
 			case (1, 0):
-				self.WorkstationFields = WORKSTATIONFIELDS(workstation_name).to_bytes()
+				self.WorkstationFields = WORKSTATION_FIELDS(workstation_name).pack()
 			case (0, 1):
-				self.DomainNameFields = DOMAINNAMEFIELDS(domain_name).to_bytes()
+				self.DomainNameFields = DOMAIN_NAME_FIELDS(domain_name).pack()
 			case (0, 0):
 				pass
 
-		if flags[3]:
-			self.Version = VERSION(major_version, minor_version, build).to_bytes()
+		if flags.packed_flags["NEGOTIATE_VERSION"]:
+			self.Version = VERSION(major_version, minor_version, build).pack()
 		
 		if domain_name_length:
 			self.DomainName = struct.pack(f">{domain_name_length}s", domain_name)
@@ -44,6 +43,6 @@ class NEGOTIATE(MESSAGE):
 		if workstation_name_length:
 			self.WorkstationName = struct.pack(f">{workstation_name_length}s", workstation_name)
 
-	def to_bytes(self):
+	def pack(self):
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
