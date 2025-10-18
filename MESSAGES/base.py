@@ -1,3 +1,4 @@
+import ntlm.constants as const
 import struct
 
 class MESSAGE(object):
@@ -5,6 +6,7 @@ class MESSAGE(object):
 	def __init__(self, message_type):
 		self.Signature = struct.pack("<8s", b'NTLMSSP\0')
 		self.MessageType = struct.pack("<I", message_type)
+		return self.Signature, self.MessageType
 
 	def charset(self, flags, oem_encoding):
 		match (flags.dict["NEGOTIATE_UNICODE"], flags.dict["NEGOTIATE_OEM"]):
@@ -19,6 +21,37 @@ class MESSAGE(object):
 	def pack(self):
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
+
+class MESSAGE_INTERFACE(MESSAGE):
+	def __init__(self, message_type):
+		super(MESSAGE_INTERFACE, self).__init__(message_type)
+
+		match message_type:
+			case const.NtLmNegotiate:
+				self.NegotiateFlags		= None
+				self.DomainNameFields	= None
+				self.WorkstationFields	= None
+			case const.NtLmChallenge:
+				self.TargetNameFields	= None
+				self.NegotiateFlags		= None 
+				self.ServerChallenge	= None 
+				self.Reserved			= None 
+				self.TargetInfoFields	= None 
+			case const.NtLmAuthenticate:
+				self.LmChallengeResponseFields			= None
+				self.NtChallengeResponseFields			= None
+				self.DomainNameFields					= None
+				self.UserNameFields						= None
+				self.WorkstationFields					= None
+				self.EncryptedRandomSessionKeyFields	= None
+				self.NegotiateFlags						= None
+
+		self.Version = None
+
+		if message_type == const.NtLmAuthenticate:
+			self.MIC = None
+
+		self.Payload = b""
 
 class FIELDS(object):
 	"""docstring for Base MESSAGE"""
