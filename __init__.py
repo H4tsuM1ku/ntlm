@@ -24,5 +24,16 @@ __all__ = [
 	"NTLMSSP_NEGOTIATE_SIGN",
 	"NTLMSSP_REQUEST_TARGET",
 	"NTLMSSP_NEGOTIATE_OEM",
-	"NTLMSSP_NEGOTIATE_UNICODE"
+	"NTLMSSP_NEGOTIATE_UNICODE",
+	"MsvAvEOL",
+	"MsvAvNbComputerName",
+	"MsvAvNbDomainName",
+	"MsvAvDnsComputerName",
+	"MsvAvDnsDomainName",
+	"MsvAvDnsTreeName",
+	"MsvAvFlags",
+	"MsvAvTimestamp",
+	"MsvAvSingleHost",
+	"MsvAvTargetName",
+	"MsvAvChannelBindings",
 ]

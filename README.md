@@ -36,7 +36,7 @@ This project focuses on *parsing, constructing, and serializing* NTLM messages i
 For now, only the Negotiate Message is working theorically... — I haven’t tested it in real communication yet.
 The NEGOTIATE_FLAGS class was improved to be easier to use. (I really love it!).
 
-There is many things to improve, but I’ll focus on that once everything's working. (quiet a liar.. sorry ^^')
+There is many things to improve, but I’ll focus on that once everything's working. (quite a liar.. sorry ^^')
 
 ### Example (literally my test.py)
 
