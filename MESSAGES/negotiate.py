@@ -1,4 +1,4 @@
-from .base import MESSAGE, DOMAIN_NAME_FIELDS, WORKSTATION_FIELDS
+from .base import MESSAGE, FIELDS
 from ntlm.constants import NtLmNegotiate
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
 import struct
@@ -7,7 +7,7 @@ class NEGOTIATE(MESSAGE):
 	"""docstring for NEGOTIATE"""
 	def __init__(self, flags, domain_name="", workstation_name="", major_version=0x0, minor_version=0x0, build=0x0, oem_encoding="cp850"):
 		super(NEGOTIATE, self).__init__(NtLmNegotiate)
-		encoding = super(NEGOTIATE, self).encode(flags, oem_encoding)
+		encoding = super(NEGOTIATE, self).charset(flags, oem_encoding)
 
 		self.NegotiateFlags = flags.pack
 
@@ -19,15 +19,15 @@ class NEGOTIATE(MESSAGE):
 
 		match (flags.dict["NEGOTIATE_OEM_WORKSTATION_SUPPLIED"], flags.dict["NEGOTIATE_OEM_DOMAIN_SUPPLIED"]):
 			case (1, 1):
-				self.DomainNameFields = DOMAIN_NAME_FIELDS(domain_name).pack()
-				self.WorkstationFields = WORKSTATION_FIELDS(domain_name, workstation_name).pack()
+				self.DomainNameFields = FIELDS(domain_name).pack()
+				self.WorkstationFields = FIELDS(workstation_name, domain_name_length).pack()
 			case (1, 0):
-				self.WorkstationFields = WORKSTATION_FIELDS(workstation_name).pack()
+				self.WorkstationFields = FIELDS(workstation_name).pack()
 			case (0, 1):
-				self.DomainNameFields = DOMAIN_NAME_FIELDS(domain_name).pack()
+				self.DomainNameFields = FIELDS(domain_name).pack()
 			case (0, 0):
-				self.DomainNameFields = DOMAIN_NAME_FIELDS("").pack()
-				self.WorkstationFields = WORKSTATION_FIELDS("").pack()
+				self.DomainNameFields = FIELDS("").pack()
+				self.WorkstationFields = FIELDS("").pack()
 
 		if flags.dict["NEGOTIATE_VERSION"]:
 			self.Version = VERSION(major_version, minor_version, build).pack()
