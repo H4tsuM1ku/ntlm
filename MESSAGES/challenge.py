@@ -21,7 +21,7 @@ class CHALLENGE(MESSAGE):
 		self.ServerChallenge = struct.pack("<Q", 0)
 		self.Reserved = struct.pack("<Q", 0)
 
-		self.Version = VERSION(major_version, minor_version, build).pack() if flags.dict["NEGOTIATE_VERSION"] else VERSION(0, 0, 0).pack()
+		self.Version = VERSION(major_version, minor_version, build).pack() if flags.dict["NEGOTIATE_VERSION"] else b""
 
 		self.Payload += struct.pack(f"<{target_name_length}s", target_name)
 		self.Payload += target_info.pack()

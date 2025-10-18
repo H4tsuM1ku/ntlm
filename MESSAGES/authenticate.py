@@ -5,8 +5,11 @@ import struct
 
 class AUTHENTICATE(MESSAGE):
 	"""docstring for AUTHENTICATE"""
-	def __init__(self):
+	def __init__(self, flags, domain_name="", user_name="", workstation_name="", major_version=0x0, minor_version=0x0, build=0x0, oem_encoding="cp850"):
 		super(AUTHENTICATE, self).__init__(NtLmAuthenticate)
+
+		offset = 88 if flags.dict["NEGOTIATE_VERSION"] else 80
+		encoding = super(AUTHENTICATE, self).charset(flags, oem_encoding)
 
 		lm_response = LMv2_RESPONSE() if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] else LM_RESPONSE()
 		nt_reponse = NTLMv2_REPONSE() if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] else NTLM_REPONSE()
@@ -15,34 +18,38 @@ class AUTHENTICATE(MESSAGE):
 		user_name = user_name.encode(encoding) if user_name else b""
 		workstation_name = workstation_name.encode(encoding) if flags.dict["NEGOTIATE_OEM_WORKSTATION_SUPPLIED"] and len(workstation_name) else b""
 
-		session_key = None
+		#session_key = None if flags.dict["NEGOTIATE_KEY_EXCH"]
 
-		self.LmChallengeResponseFields = FIELDS(lm_response).pack()
-		self.NtChallengeResponseFields = FIELDS(nt_reponse, len(lm_response)).pack()
+		self.LmChallengeResponseFields = FIELDS(lm_response, offset).pack()
+		self.NtChallengeResponseFields = FIELDS(nt_reponse, offset, len(lm_response)).pack()
 
-		self.DomainNameFields = FIELDS(domain_name, len(lm_response)\
-													+len(nt_reponse)).pack()
+		self.DomainNameFields = FIELDS(domain_name, offset, len(lm_response)\
+															+len(nt_reponse)).pack()
 
-		self.UserNameFields = FIELDS(user_name, len(lm_response)\
-												+len(nt_reponse)\
-												+len(domain_name)).pack()
+		self.UserNameFields = FIELDS(user_name, offset, len(lm_response)\
+														+len(nt_reponse)\
+														+len(domain_name)).pack()
 
-		self.WorkstationFields = FIELDS(workstation_name, len(lm_response)\
-															+len(nt_reponse)\
-															+len(domain_name)\
-															+len(user_name)).pack()
-
-		self.EncryptedRandomSessionKeyFields = FIELDS(session_key, len(lm_response)\
-																	+len(nt_response)\
+		self.WorkstationFields = FIELDS(workstation_name, offset, len(lm_response)\
+																	+len(nt_reponse)\
 																	+len(domain_name)\
-																	+len(user_name)\
-																	+len(workstation_name)).pack()
+																	+len(user_name)).pack()
+
+		self.EncryptedRandomSessionKeyFields = FIELDS(session_key, offset, len(lm_response)\
+																			+len(nt_response)\
+																			+len(domain_name)\
+																			+len(user_name)\
+																			+len(workstation_name)).pack()
 
 		self.NegotiateFlags = flags.pack
 
-		self.Version = VERSION(major_version, minor_version, build).pack() if flags.dict["NEGOTIATE_VERSION"] else VERSION(0, 0, 0).pack()
+		self.Version = VERSION(major_version, minor_version, build).pack() if flags.dict["NEGOTIATE_VERSION"] else b""
 
 		#self.MIC = None
 
-		self.Payload += struct.pack(f"<{target_name_length}s", target_name)
-		self.Payload += target_info.pack()
+		self.Payload += lm_response.pack()
+		self.Payload += nt_reponse.pack()
+		self.Payload += struct.pack(f"<{len(domain_name)}s", domain_name)
+		self.Payload += struct.pack(f"<{len(user_name)}s", user_name)
+		self.Payload += struct.pack(f"<{len(workstation_name)}s", workstation_name)
+		self.Payload += session_key.pack()
