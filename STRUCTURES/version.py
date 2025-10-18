@@ -35,7 +35,7 @@ class VERSION(object):
 		self.ProductMinorVersion = struct.pack('B', minor_version)
 		self.ProductBuild = struct.pack('<H', build)
 		self.Reserved = struct.pack('3B', 0x0, 0x0, 0x0)
-		self.NTLMRevisionCurrent = struct.pack('B', 0xF)
+		self.NTLMRevisionCurrent = struct.pack('B', 0x0)
 
 	def pack(self):
 		values = [getattr(self, attr) for attr in vars(self)]
