@@ -13,10 +13,10 @@ class MESSAGE(object):
 			self.WorkstationFields	= None
 		elif message_type == NtLmChallenge:
 			self.TargetNameFields	= None
-			self.NegotiateFlags		= None 
-			self.ServerChallenge	= None 
-			self.Reserved			= None 
-			self.TargetInfoFields	= None 
+			self.NegotiateFlags		= None
+			self.ServerChallenge	= None
+			self.Reserved			= None
+			self.TargetInfoFields	= None
 		elif message_type == NtLmAuthenticate:
 			self.LmChallengeResponseFields			= None
 			self.NtChallengeResponseFields			= None

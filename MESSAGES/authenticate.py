@@ -10,6 +10,7 @@ class AUTHENTICATE(MESSAGE):
 
 		offset = 88 if flags.dict["NEGOTIATE_VERSION"] else 80
 		encoding = super(AUTHENTICATE, self).charset(flags, oem_encoding)
+		version = VERSION()
 
 		lm_response = LMv2_RESPONSE() if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] else LM_RESPONSE()
 		nt_reponse = NTLMv2_REPONSE() if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] else NTLM_REPONSE()
@@ -43,9 +44,11 @@ class AUTHENTICATE(MESSAGE):
 
 		self.NegotiateFlags = flags.pack
 
-		self.Version = VERSION(major_version, minor_version, build).pack() if flags.dict["NEGOTIATE_VERSION"] else b""
+		self.Version = version.get_version()
+		if flags.dict["NEGOTIATE_VERSION"]:
+			self.Version = version.get_version(major_version, minor_version, build)
 
-		#self.MIC = None
+		self.MIC = struct.pack()
 
 		self.Payload += lm_response.pack()
 		self.Payload += nt_reponse.pack()
@@ -53,3 +56,6 @@ class AUTHENTICATE(MESSAGE):
 		self.Payload += struct.pack(f"<{len(user_name)}s", user_name)
 		self.Payload += struct.pack(f"<{len(workstation_name)}s", workstation_name)
 		self.Payload += session_key.pack()
+
+		if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and flag.dict["NEGOTIATE_ALWAYS_SIGN"] and av_list:
+			self.MIC = compute_MIC(negotiate_message, challenge_message, self)

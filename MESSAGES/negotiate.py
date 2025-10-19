@@ -10,6 +10,7 @@ class NEGOTIATE(MESSAGE):
 
 		offset = 40 if flags.dict["NEGOTIATE_VERSION"] else 32
 		encoding = super(NEGOTIATE, self).charset(flags, oem_encoding)
+		version = VERSION()
 
 		domain_name = domain_name.encode(encoding) if flags.dict["NEGOTIATE_OEM_DOMAIN_SUPPLIED"] and len(domain_name) else b""
 		workstation_name = workstation_name.encode(encoding) if flags.dict["NEGOTIATE_OEM_WORKSTATION_SUPPLIED"] and len(workstation_name) else b""
@@ -19,7 +20,9 @@ class NEGOTIATE(MESSAGE):
 		self.DomainNameFields = FIELDS(domain_name, offset).pack()
 		self.WorkstationFields = FIELDS(workstation_name, offset, len(domain_name)).pack()
 
-		self.Version = VERSION(major_version, minor_version, build).pack() if flags.dict["NEGOTIATE_VERSION"] else b""
+		self.Version = version.get_version()
+		if flags.dict["NEGOTIATE_VERSION"]:
+			self.Version = version.get_version(major_version, minor_version, build)
 
 		self.Payload += struct.pack(f"<{len(domain_name)}s", domain_name)
 		self.Payload += struct.pack(f"<{len(workstation_name)}s", workstation_name)
