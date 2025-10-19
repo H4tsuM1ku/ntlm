@@ -5,7 +5,7 @@ import struct
 
 class AUTHENTICATE(MESSAGE):
 	"""docstring for AUTHENTICATE"""
-	def __init__(self, flags, domain_name="", user_name="", workstation_name="", major_version=0x0, minor_version=0x0, build=0x0, oem_encoding="cp850"):
+	def __init__(self, flags, domain_name="", user_name="", workstation_name="", major_version=0x0, minor_version=0x0, build=0x0, revision=0x0F, oem_encoding="cp850"):
 		super(AUTHENTICATE, self).__init__(NtLmAuthenticate)
 
 		offset = 88 if flags.dict["NEGOTIATE_VERSION"] else 80
@@ -13,7 +13,7 @@ class AUTHENTICATE(MESSAGE):
 		version = VERSION()
 
 		lm_response = LMv2_RESPONSE() if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] else LM_RESPONSE()
-		nt_reponse = NTLMv2_REPONSE() if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] else NTLM_REPONSE()
+		nt_reponse = NTLMv2_RESPONSE() if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] else NTLM_RESPONSE()
 
 		domain_name = domain_name.encode(encoding) if flags.dict["NEGOTIATE_OEM_DOMAIN_SUPPLIED"] and len(domain_name) else b""
 		user_name = user_name.encode(encoding) if user_name else b""
@@ -46,7 +46,7 @@ class AUTHENTICATE(MESSAGE):
 
 		self.Version = version.get_version()
 		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version = version.get_version(major_version, minor_version, build)
+			self.Version = version.get_version(major_version, minor_version, build, revision)
 
 		self.MIC = struct.pack()
 

@@ -50,6 +50,7 @@ class MESSAGE(object):
 class FIELDS(object):
 	"""docstring for Base MESSAGE"""
 	def __init__(self, name, default_offset, variable_offset=0):
+		print(len(name))
 		self.NameLen = struct.pack("<H", len(name))
 		self.NameMaxLen = self.NameLen
 		self.NameBufferOffset = struct.pack("<I", 0+default_offset+variable_offset)

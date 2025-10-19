@@ -41,11 +41,11 @@ class VERSION(object):
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
 
-	def get_version(self, major_version=0, minor_version=0, build=0):
+	def get_version(self, major_version=0, minor_version=0, build=0, revision=0):
 		self.ProductMajorVersion = struct.pack('B', major_version)
 		self.ProductMinorVersion = struct.pack('B', minor_version)
 		self.ProductBuild = struct.pack('<H', build)
 		self.Reserved = struct.pack('3B', 0x0, 0x0, 0x0)
-		self.NTLMRevisionCurrent = struct.pack('B', 0x0F)
+		self.NTLMRevisionCurrent = struct.pack('B', revision)
 
 		return self.pack()
