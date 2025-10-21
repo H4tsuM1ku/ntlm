@@ -1,14 +1,14 @@
 from .base import MESSAGE, FIELDS
-from ntlm.constants import NtLmAuthenticate
+from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmAuthenticate
 from ntlm.STRUCTURES import VERSION
 import struct
 
 class AUTHENTICATE(MESSAGE):
 	"""docstring for AUTHENTICATE"""
-	def __init__(self, flags, domain_name="", user_name="", workstation_name="", major_version=0x0, minor_version=0x0, build=0x0, revision=0x0F, oem_encoding="cp850"):
+	def __init__(self, flags, domain_name="", user_name="", workstation_name="", major_version=NUL, minor_version=NUL, build=NUL, oem_encoding="cp850"):
 		super(AUTHENTICATE, self).__init__(NtLmAuthenticate)
 
-		offset = 88 if flags.dict["NEGOTIATE_VERSION"] else 80
+		offset = 88
 		encoding = super(AUTHENTICATE, self).charset(flags, oem_encoding)
 		version = VERSION()
 
@@ -21,32 +21,20 @@ class AUTHENTICATE(MESSAGE):
 
 		#session_key = None if flags.dict["NEGOTIATE_KEY_EXCH"]
 
-		self.LmChallengeResponseFields = FIELDS(lm_response, offset).pack()
-		self.NtChallengeResponseFields = FIELDS(nt_reponse, offset, len(lm_response)).pack()
+		self.LmChallengeResponseFields, offset = FIELDS(lm_response, offset).pack(), offset + len(lm_response)
+		self.NtChallengeResponseFields, offset = FIELDS(nt_reponse, offset).pack(), offset + len(nt_reponse)
 
-		self.DomainNameFields = FIELDS(domain_name, offset, len(lm_response)\
-															+len(nt_reponse)).pack()
+		self.DomainNameFields, offset = FIELDS(domain_name, offset).pack(), offset + len(domain_name)
+		self.UserNameFields, offset = FIELDS(user_name, offset).pack(), offset + len(user_name)
+		self.WorkstationFields, offset = FIELDS(workstation_name, offset).pack(), offset + len(workstation_name)
 
-		self.UserNameFields = FIELDS(user_name, offset, len(lm_response)\
-														+len(nt_reponse)\
-														+len(domain_name)).pack()
-
-		self.WorkstationFields = FIELDS(workstation_name, offset, len(lm_response)\
-																	+len(nt_reponse)\
-																	+len(domain_name)\
-																	+len(user_name)).pack()
-
-		self.EncryptedRandomSessionKeyFields = FIELDS(session_key, offset, len(lm_response)\
-																			+len(nt_response)\
-																			+len(domain_name)\
-																			+len(user_name)\
-																			+len(workstation_name)).pack()
+		self.EncryptedRandomSessionKeyFields, offset = FIELDS(session_key, offset).pack(), offset + len(session_key)
 
 		self.NegotiateFlags = flags.pack
 
 		self.Version = version.get_version()
 		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version = version.get_version(major_version, minor_version, build, revision)
+			self.Version = version.get_version(major_version, minor_version, build, NTLMSSP_REVISION_W2K3)
 
 		self.MIC = struct.pack()
 
@@ -57,5 +45,5 @@ class AUTHENTICATE(MESSAGE):
 		self.Payload += struct.pack(f"<{len(workstation_name)}s", workstation_name)
 		self.Payload += session_key.pack()
 
-		if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and flag.dict["NEGOTIATE_ALWAYS_SIGN"] and av_list:
+		if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and flag.dict["NEGOTIATE_ALWAYS_SIGN"] and av_list[MsvAvFlags] & 0x00000002:
 			self.MIC = compute_MIC(negotiate_message, challenge_message, self)

@@ -1,6 +1,7 @@
 from .constants import *
 
 __all__ = [
+	"NUL",
 	"NtLmChallenge",
 	"NtLmAuthenticate",
 	"NTLMSSP_NEGOTIATE_56",
@@ -25,6 +26,7 @@ __all__ = [
 	"NTLMSSP_REQUEST_TARGET",
 	"NTLMSSP_NEGOTIATE_OEM",
 	"NTLMSSP_NEGOTIATE_UNICODE",
+	"NTLMSSP_REVISION_W2K3",
 	"MsvAvEOL",
 	"MsvAvNbComputerName",
 	"MsvAvNbDomainName",

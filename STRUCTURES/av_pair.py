@@ -1,20 +1,21 @@
-from ntlm.constants import MsvAvEOL, MsvAvNbComputerName, MsvAvNbDomainName,\
+from .single_host import SINGLE_HOST
+from ntlm.constants import NUL, MsvAvEOL, MsvAvNbComputerName, MsvAvNbDomainName,\
 							MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName,\
 							MsvAvFlags, MsvAvTimestamp, MsvAvSingleHost, MsvAvTargetName,\
 							MsvAvChannelBindings
 import struct
 
 class AV_PAIR_LIST(object):
-	def __init__(self, av_list=[]):
+	def __init__(self, av_list={}):
 		self.av_pairs = []
 
 		for av_id in av_list:
 			if av_id == MsvAvEOL:
 				continue
 
-			self.add(av_id, av_list[av_pair])
+			self.add(av_id, av_list[av_id])
 
-		self.add(MsvAvEOL, 0x0000)
+		self.add(MsvAvEOL, NUL)
 
 	def __len__(self):
 		length = 0
@@ -30,10 +31,10 @@ class AV_PAIR_LIST(object):
 		return b"".join(self.av_pairs)
 
 class AV_PAIR(object):
-	def __init__(self, av_id, value):
+	def __init__(self, av_id, value=""):
 		self.av_id = struct.pack("<H", av_id)
 
-		if av_id in {MsvAvNbComputerName, MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName, MsvAvTargetName}:
+		if av_id in {MsvAvNbComputerName, MsvAvNbDomainName, MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName, MsvAvTargetName}:
 			value = value.encode("utf-16-le")
 			self.len = struct.pack("<H", len(value))
 			self.value = struct.pack(f"<{len(value)}s", value)
@@ -50,11 +51,10 @@ class AV_PAIR(object):
 			self.len = struct.pack("<H", len(single_host))
 			self.value = single_host.pack()
 		if av_id == MsvAvEOL:
-			self.len = struct.pack("<H", 0)
+			self.len = struct.pack("<H", NUL)
 
 	def __len__(self):
-		print(struct.unpack("<H", self.len))
-		return struct.unpack("<H", self.len)
+		return struct.unpack("<H", self.len)[0]
 
 	def pack(self):
 		values = [getattr(self, attr) for attr in vars(self)]
