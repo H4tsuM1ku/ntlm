@@ -36,7 +36,7 @@ class AUTHENTICATE(MESSAGE):
 		if flags.dict["NEGOTIATE_VERSION"]:
 			self.Version = version.get_version(major_version, minor_version, build, NTLMSSP_REVISION_W2K3)
 
-		self.MIC = struct.pack()
+		self.MIC = struct.pack("<16s", b"\x00"*16)
 
 		self.Payload += lm_response.pack()
 		self.Payload += nt_reponse.pack()

@@ -1,5 +1,8 @@
+from .hashing import *
 from .utils import *
 
 __all__ = [
-	"nonce"
+	"nonce",
+	"LMOWFv1",
+	"NTOWFv1"
 ]

@@ -1,4 +1,4 @@
-from ntlm.constants import NtLmNegotiate, NtLmChallenge, NtLmAuthenticate
+from ntlm.constants import NUL, NtLmNegotiate, NtLmChallenge, NtLmAuthenticate
 import struct
 
 class MESSAGE(object):
@@ -52,7 +52,10 @@ class FIELDS(object):
 	def __init__(self, name, offset):
 		self.NameLen = struct.pack("<H", len(name))
 		self.NameMaxLen = self.NameLen
-		self.NameBufferOffset = struct.pack("<I", offset)
+
+		self.NameBufferOffset = struct.pack("<I", NUL)
+		if len(name):
+			self.NameBufferOffset = struct.pack("<I", offset)
 
 	def pack(self):
 		values = [getattr(self, attr) for attr in vars(self)]

@@ -13,7 +13,9 @@ class CHALLENGE(MESSAGE):
 		encoding = super(CHALLENGE, self).charset(flags, oem_encoding)
 		version = VERSION()
 
-		target_name = target_name.encode(encoding) if flags.dict["REQUEST_TARGET"] and len(target_name) else b""
+		if (flags.dict["REQUEST_TARGET"] or flags.dict["TARGET_TYPE_SERVER"] or flags.dict["TARGET_TYPE_DOMAIN"]) and len(target_name):
+			target_name = target_name.encode(encoding)
+		
 		target_info = AV_PAIR_LIST(av_list) if flags.dict["NEGOTIATE_TARGET_INFO"] else AV_PAIR_LIST()
 
 		self.TargetNameFields, offset = FIELDS(target_name, offset).pack(), offset + len(target_name)

@@ -8,14 +8,17 @@ import struct
 class AV_PAIR_LIST(object):
 	def __init__(self, av_list={}):
 		self.av_pairs = []
+		EOL = False
 
 		for av_id in av_list:
 			if av_id == MsvAvEOL:
+				EOL = True
 				continue
 
 			self.add(av_id, av_list[av_id])
 
-		self.add(MsvAvEOL, NUL)
+		if EOL:
+			self.add(av_id, av_list[MsvAvEOL])
 
 	def __len__(self):
 		length = 0
@@ -50,6 +53,11 @@ class AV_PAIR(object):
 			single_host = SINGLE_HOST()
 			self.len = struct.pack("<H", len(single_host))
 			self.value = single_host.pack()
+		if av_id == MsvAvChannelBindings:
+			pass
+			#value = ""
+			#self.len = struct.pack("<H", len(value))
+			#self.value = value.pack()
 		if av_id == MsvAvEOL:
 			self.len = struct.pack("<H", NUL)
 
