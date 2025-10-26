@@ -12,8 +12,10 @@ class AUTHENTICATE(MESSAGE):
 		encoding = super(AUTHENTICATE, self).charset(flags, oem_encoding)
 		version = VERSION()
 
-		lm_response = LMv2_RESPONSE() if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] else LM_RESPONSE()
-		nt_reponse = NTLMv2_RESPONSE() if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] else NTLM_RESPONSE()
+		if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and flags.dict["NEGOTIATE_NTLM"]:
+			lm_response, nt_response = LM_RESPONSE(), NTLM_RESPONSE()
+		elif not flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and flags.dict["NEGOTIATE_NTLM"]:
+			lm_response, nt_response = LMv2_RESPONSE(), NTLMv2_RESPONSE()
 
 		domain_name = domain_name.encode(encoding) if flags.dict["NEGOTIATE_OEM_DOMAIN_SUPPLIED"] and len(domain_name) else b""
 		user_name = user_name.encode(encoding) if user_name else b""
@@ -21,8 +23,8 @@ class AUTHENTICATE(MESSAGE):
 
 		#session_key = None if flags.dict["NEGOTIATE_KEY_EXCH"]
 
-		self.LmChallengeResponseFields, offset = FIELDS(lm_response, offset).pack(), offset + len(lm_response)
-		self.NtChallengeResponseFields, offset = FIELDS(nt_reponse, offset).pack(), offset + len(nt_reponse)
+		self.LmChallengeResponseFields, offset = FIELDS(lm_response.Response, offset).pack(), offset + len(lm_response)
+		self.NtChallengeResponseFields, offset = FIELDS(nt_response.Response, offset).pack(), offset + len(nt_response)
 
 		self.DomainNameFields, offset = FIELDS(domain_name, offset).pack(), offset + len(domain_name)
 		self.UserNameFields, offset = FIELDS(user_name, offset).pack(), offset + len(user_name)
