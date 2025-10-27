@@ -28,7 +28,7 @@ class CHALLENGE(MESSAGE):
 
 		self.Version = version.get_version()
 		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version = version.get_version(*version, NTLMSSP_REVISION_W2K3)
+			self.Version = version.get_version(*version_infos, NTLMSSP_REVISION_W2K3)
 
 		self.Payload += struct.pack(f"<{len(target_name)}s", target_name)
 		self.Payload += target_info.pack()

@@ -23,7 +23,7 @@ class NEGOTIATE(MESSAGE):
 
 		self.Version = version.get_version()
 		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version = version.get_version(*version, NTLMSSP_REVISION_W2K3)
+			self.Version = version.get_version(*version_infos, NTLMSSP_REVISION_W2K3)
 
 		self.Payload += struct.pack(f"<{len(domain_name)}s", domain_name)
 		self.Payload += struct.pack(f"<{len(workstation_name)}s", workstation_name)

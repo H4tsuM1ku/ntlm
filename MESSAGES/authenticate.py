@@ -1,7 +1,7 @@
 from .base import MESSAGE, FIELDS
 from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmAuthenticate
-from ntlm.STRUCTURES import VERSION
-from ntlm.CRYPTO import Z, nonce, compute_response
+from ntlm.STRUCTURES import VERSION, LM_RESPONSE, LMv2_RESPONSE, NTLM_RESPONSE, NTLMv2_RESPONSE
+from ntlm.CRYPTO import Z, nonce, compute_response, KXKEY, SIGNKEY, SEALKEY
 import struct
 
 class AUTHENTICATE(MESSAGE):
@@ -54,16 +54,16 @@ class AUTHENTICATE(MESSAGE):
 
 		self.Version = version.get_version()
 		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version = version.get_version(*version, NTLMSSP_REVISION_W2K3)
+			self.Version = version.get_version(*version_infos, NTLMSSP_REVISION_W2K3)
 
 		self.MIC = Z(16)
 
 		self.Payload += lm_response.pack()
-		self.Payload += nt_reponse.pack()
+		self.Payload += nt_response.pack()
 		self.Payload += struct.pack(f"<{len(domain_name)}s", domain_name)
 		self.Payload += struct.pack(f"<{len(user_name)}s", user_name)
 		self.Payload += struct.pack(f"<{len(workstation_name)}s", workstation_name)
 		self.Payload += EncryptedRandomSessionKey
 
-		if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and flag.dict["NEGOTIATE_ALWAYS_SIGN"] and av_list[MsvAvFlags] & 0x00000002:
+		if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and flags.dict["NEGOTIATE_ALWAYS_SIGN"] and av_list[MsvAvFlags] & 0x00000002:
 			self.MIC = compute_MIC(negotiate_message, server_challenge, self.pack())

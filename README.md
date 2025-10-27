@@ -6,10 +6,14 @@ This project aims to provide a clear and modular foundation for working with NTL
 ```
 .
 ├── __init__.py
-├── constants.py # NTLM Constants
+├── constants.py		# NTLM Constants
+├── requirements.txt	# "List" of Python packages required (there is only one which is pycryptodome — seriously, who hasn't this lib???)
 ├── CRYPTO
 │   ├── __init__.py
-│   └── utils.py		# Non-specific cryptographic functions (such as nonce)
+│   ├── compute.py		# High-level crypto operations
+│   ├── hashing.py		# Hash functions (NTOWF/LMOWF)
+│   ├── keys.py			# Key derivation
+│   └── utils.py		# (Non-specific) Cryptographic helpers (such as nonce)
 ├── MESSAGES
 │   ├── __init__.py
 │   ├── authenticate.py	# NTLM AUTHENTICATE_MESSAGE structure
@@ -20,13 +24,14 @@ This project aims to provide a clear and modular foundation for working with NTL
     ├── __init__.py
     ├── av_pair.py			# AV_PAIR structure (TargetInfo Fields)
     ├── negotiate_flags.py	# NEGOTIATE_FLAGS bit structure
+    ├── responses.py		# Response structures (LM/NT/NTLMv2 responses)
     ├── single_host.py		# SINGLE_HOST structure
     └── version.py			# VERSION structure
 
-4 directories, 14 files
+4 directories, 19 files
 ```
 
-The codebase is divided into two main packages and a file:
+The codebase is divided into three main packages and a file:
 - **constants.py** – Defines NTLM constants and protocol values.
 - **CRYPTO/** — Contains generic cryptographic helpers and low-level primitives used throughout NTLM.
 - **MESSAGES/** — Contains the main NTLM message types.
@@ -37,58 +42,96 @@ The codebase is divided into two main packages and a file:
 ## Overview
 
 NTLM (NT LAN Manager) is an authentication protocol used in various Microsoft networking environments.  
-This project focuses on *parsing, constructing, and serializing* NTLM messages in a readable, Pythonic way.
+This project focuses on *parsing, constructing, and serializing* NTLM messages in a readable way.
 
 For now :
  - Negotiate Message is working theorically... — I haven’t tested it in real communication yet.
  - Same for Challenge Message!
- - Working on Authenticate Message, session_key is missing and composition of the MIC.
- - Many stuctures are missing (TIMESTAMP, LM_RESPONSE, NT_RESPONSE, ...)
+ - Working on Authenticate Message, soon the end.
+ - Almost all structures are implemented, same for crypto functions (missing RC4).
+ - Some bugs for fully use NTLMv2.
+ - MIC and Channel Bindings are not supported yet :'(
 
 There is many things to improve, but I’ll focus on that once everything's working. (quite a liar.. sorry ^^')
 
-### Example (literally my test.py)
+### Examples 
+#### literally my test.py
 
 ```python
-from ntlm.constants import MsvAvSingleHost, MsvAvNbComputerName, MsvAvNbDomainName
+from ntlm.constants import WINDOWS_MAJOR_VERSION_6, WINDOWS_MINOR_VERSION_0
+from ntlm.CRYPTO import LMOWFv1, NTOWFv1
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS
 from ntlm.MESSAGES import NEGOTIATE, CHALLENGE
 
 
-flags = NEGOTIATE_FLAGS.NEGOTIATE_OEM\
+flags = NEGOTIATE_FLAGS.NEGOTIATE_UNICODE\
         | NEGOTIATE_FLAGS.NEGOTIATE_VERSION\
         | NEGOTIATE_FLAGS.NEGOTIATE_OEM_DOMAIN_SUPPLIED\
         | NEGOTIATE_FLAGS.NEGOTIATE_OEM_WORKSTATION_SUPPLIED
 
-print(hex(flags), flags.dict)
-
-domain_name = "MIKU.WORLD"
-workstation_name = "Hatsu"
-major = 0xD3
-minor = 0x55
-build = 0x4444
-
-negotiate_message = NEGOTIATE(flags, domain_name, workstation_name)
-print(negotiate_message.pack())
-
-
-flags = flags.clear()
-flags |= NEGOTIATE_FLAGS.NEGOTIATE_OEM\
-        | NEGOTIATE_FLAGS.REQUEST_TARGET\
-        | NEGOTIATE_FLAGS.NEGOTIATE_TARGET_INFO
-
-av_list = {
-        MsvAvNbComputerName:"Hatsu.MIKU.WORLD",
-        MsvAvNbDomainName:"MIKU.WORLD",
-        MsvAvSingleHost:""
+infos = {
+    "domain": "MIKU.WORLD",
+    "workstation": "Hatsu",
+    "NT_hash": NTOWFv1("World"),
+    "LM_hash": LMOWFv1("is"),
+    "user": "Mine",
+    "target": "Server"
 }
 
-print(hex(flags), flags.dict)
+version = (WINDOWS_MAJOR_VERSION_6, WINDOWS_MINOR_VERSION_0, 0x4444)
 
-target_name = "Hatsu"
+negotiate_message = NEGOTIATE(flags, infos, version)
+print(negotiate_message.pack())
 
-challenge_message = CHALLENGE(flags, workstation_name, av_list)
+flags = flags.clear()
+flags |= NEGOTIATE_FLAGS.NEGOTIATE_KEY_EXCH\
+        | NEGOTIATE_FLAGS.NEGOTIATE_56\
+        | NEGOTIATE_FLAGS.NEGOTIATE_128\
+        | NEGOTIATE_FLAGS.NEGOTIATE_VERSION\
+        | NEGOTIATE_FLAGS.TARGET_TYPE_SERVER\
+        | NEGOTIATE_FLAGS.NEGOTIATE_ALWAYS_SIGN\
+        | NEGOTIATE_FLAGS.NEGOTIATE_NTLM\
+        | NEGOTIATE_FLAGS.NEGOTIATE_SEAL\
+        | NEGOTIATE_FLAGS.NEGOTIATE_SIGN\
+        | NEGOTIATE_FLAGS.NEGOTIATE_OEM\
+        | NEGOTIATE_FLAGS.NEGOTIATE_UNICODE
+
+challenge_message = CHALLENGE(flags, infos, {}, version)
 print(challenge_message.pack())
+```
+
+#### test.py crypto part
+
+The constants are from the documentation and have been checked with documentation examples, you can compare them.
+
+```python
+from ntlm.CRYPTO import *
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS
+
+ServerChallenge = b"\x01\x23\x45\x67\x89\xab\xcd\xef"
+ClientChallenge = b"\xaa"*8
+RandomSessionKey = b"\x55"*16
+
+ResponseKeyLM = LMOWFv1("Password")
+ResponseKeyNT = NTOWFv1("Password")
+
+# NTLM v1 no extended security
+
+flags = NEGOTIATE_FLAGS.NEGOTIATE_NTLM | NEGOTIATE_FLAGS.NEGOTIATE_LM_KEY
+
+LmChallengeResponse, NtChallengeResponse, SessionBaseKey = compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, ClientChallenge)
+KeyExchangeKey = KXKEY(flags, SessionBaseKey, ResponseKeyLM, ServerChallenge, LmChallengeResponse)
+
+print(LmChallengeResponse, NtChallengeResponse, SessionBaseKey, KeyExchangeKey)
+
+# NTLM v1 extended security
+
+flags = NEGOTIATE_FLAGS.NEGOTIATE_NTLM | NEGOTIATE_FLAGS.NEGOTIATE_EXTENDED_SESSIONSECURITY
+
+LmChallengeResponse, NtChallengeResponse, SessionBaseKey = compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, ClientChallenge)
+KeyExchangeKey = KXKEY(flags, SessionBaseKey, ResponseKeyNT, ServerChallenge, LmChallengeResponse)
+
+print(LmChallengeResponse, NtChallengeResponse, SessionBaseKey, KeyExchangeKey)
 ```
 
 Developed by Hatsu with so many 💖💖💖<br>

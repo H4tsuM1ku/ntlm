@@ -20,7 +20,7 @@ class LMv2_RESPONSE(object):
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
 
-class NT_RESPONSE(object):
+class NTLM_RESPONSE(object):
 	"""docstring for LM_RESPONSE"""
 	def __init__(self, response):
 		self.Response = response
@@ -29,7 +29,7 @@ class NT_RESPONSE(object):
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
 
-class NTv2_RESPONSE(object):
+class NTLMv2_RESPONSE(object):
 	"""docstring for LM_RESPONSE"""
 	def __init__(self, response, challenge):
 		self.Response = response
