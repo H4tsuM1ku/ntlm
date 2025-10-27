@@ -27,4 +27,6 @@ def compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, Clien
 
 		SessionBaseKey = hmac_md5(ResponseKeyNT,NTProofStr)
 
-	return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey)
+		return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey, temp)
+
+	return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey, Z(0))

@@ -1,4 +1,5 @@
 from .utils import Z, des, md5, md4, hmac_md5
+from ntlm.constants import NTLMSSP_REVISION_W2K3
 
 def KXKEY(flags, SessionBaseKey, ResponseKeyLM, ServerChallenge, LmChallengeResponse):
 	key_exchange_key = SessionBaseKey
@@ -24,7 +25,7 @@ def SIGNKEY(flags, ExportedSessionKey, Mode):
 
 	return sign_key
 
-def SEALKEY(flags, ExportedSessionKey, Mode):
+def SEALKEY(flags, ExportedSessionKey, NTLMRevisionCurrent, Mode):
 	if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
 		if flags.dict["NEGOTIATE_128"]:
 			seal_key = ExportedSessionKey

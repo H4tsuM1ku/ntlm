@@ -3,6 +3,7 @@ from ntlm.constants import NUL, MsvAvEOL, MsvAvNbComputerName, MsvAvNbDomainName
 							MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName,\
 							MsvAvFlags, MsvAvTimestamp, MsvAvSingleHost, MsvAvTargetName,\
 							MsvAvChannelBindings
+from datetime import datetime, timezone
 import struct
 
 class AV_PAIR_LIST(object):
@@ -27,7 +28,7 @@ class AV_PAIR_LIST(object):
 
 		return length
 
-	def add(self, av_id: int, value: bytes):
+	def add(self, av_id, value):
 		self.av_pairs.append(AV_PAIR(av_id, value).pack())
 
 	def pack(self):
@@ -46,9 +47,9 @@ class AV_PAIR(object):
 			self.len = struct.pack("<H", len(value))
 			self.value = value
 		if av_id == MsvAvTimestamp:
-			timestamp = TIMESTAMP()
+			timestamp = struct.pack("<Q", int((datetime.now().timestamp() - datetime(1601, 1, 1, tzinfo=timezone.utc).timestamp()) * 10**7))
 			self.len = struct.pack("<H", len(timestamp))
-			self.value = timestamp.pack()
+			self.value = timestamp
 		if av_id == MsvAvSingleHost:
 			single_host = SINGLE_HOST()
 			self.len = struct.pack("<H", len(single_host))

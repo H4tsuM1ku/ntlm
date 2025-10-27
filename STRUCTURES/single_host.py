@@ -1,12 +1,12 @@
 from ntlm.constants import NUL
-from ntlm.CRYPTO import nonce
+from ntlm.CRYPTO import Z, nonce
 import struct
 
 class SINGLE_HOST(object):
 	def __init__(self):
 		self.Size = struct.pack("<I", 48)
-		self.Z4 = struct.pack("<I", NUL)
-		self.CustomData = struct.pack("<L", NUL)
+		self.Z4 = Z(4)
+		self.CustomData = Z(8)
 		self.MachineID = nonce(256).to_bytes(32, 'little')
 
 	def __len__(self):
