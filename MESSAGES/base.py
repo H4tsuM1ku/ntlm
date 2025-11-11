@@ -43,9 +43,44 @@ class MESSAGE(object):
 				raise Exception("SEC_E_INVALID_TOKEN: You need to choose a character set encoding")
 		return encoding
 
-	def pack(self):
+	def to_bytes(self):
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
+
+	def from_bytes(self, message_bytes):
+		self.Signature = struct.unpack("8s", message_bytes[:8])
+		self.MessageType = struct.unpack("<I", message_bytes[8:12])
+
+		if self.MessageType == NtLmNegotiate:
+			self.NegotiateFlags		= struct.unpack("<I", message_bytes[12:16])
+			self.DomainNameFields	= struct.unpack("<Q", message_bytes[16:24])
+			self.WorkstationFields	= struct.unpack("<Q", message_bytes[24:32])
+			offset = 32
+		elif self.MessageType == NtLmChallenge:
+			self.TargetNameFields	= struct.unpack("<Q", message_bytes[12:20])
+			self.NegotiateFlags		= struct.unpack("<I", message_bytes[20:24])
+			self.ServerChallenge	= struct.unpack("<Q", message_bytes[24:32])
+			self.Reserved			= struct.unpack("<Q", message_bytes[32:40])
+			self.TargetInfoFields	= struct.unpack("<Q", message_bytes[40:48])
+			offset = 48
+		elif self.MessageType == NtLmAuthenticate:
+			self.LmChallengeResponseFields			= struct.unpack("<Q", message_bytes[12:20])
+			self.NtChallengeResponseFields			= struct.unpack("<Q", message_bytes[20:28])
+			self.DomainNameFields					= struct.unpack("<Q", message_bytes[28:36])
+			self.UserNameFields						= struct.unpack("<Q", message_bytes[36:44])
+			self.WorkstationFields					= struct.unpack("<Q", message_bytes[44:52])
+			self.EncryptedRandomSessionKeyFields	= struct.unpack("<Q", message_bytes[52:60])
+			self.NegotiateFlags						= struct.unpack("<I", message_bytes[60:64])
+			offset = 64
+
+		self.Version = struct.unpack("<Q", message_bytes[offset:offset+8])
+		offset += 8
+
+		if self.MessageType == NtLmAuthenticate:
+			self.MIC = struct.unpack("<I", message_bytes[offset:offset+16])
+			offset += 16
+
+		self.Payload = struct.unpack(f"{len(message_bytes)-offset}s", message_bytes[offset:])
 
 class FIELDS(object):
 	"""docstring for Base MESSAGE"""

@@ -1,4 +1,4 @@
-from Crypto.Cipher import DES
+from Crypto.Cipher import DES, ARC4
 from Crypto.Hash import HMAC, MD5, MD4
 import secrets
 
@@ -36,6 +36,12 @@ def des(key, message):
 
 def desl(key, message):
 	temp = des(key[:7], message) + des(key[7:14], message) + des(key[14:] + Z(5), message)
+	return temp
+
+def rc4k(key, message):
+	temp = ARC4.new(key)
+	temp = temp.encrypt(message)
+
 	return temp
 
 def adjust_key_parity(input_key):

@@ -47,7 +47,7 @@ class NTLMv2_CLIENT_CHALLENGE(object):
 		self.Reserved1 = Z(2)
 		self.Reserved2 = Z(4)
 		self.TimeStamp = time
-		self.ChallengeFromClient = struct.pack("<Q", challenge)
+		self.ChallengeFromClient = challenge
 		self.Reserved3 = Z(4)
 		self.AvPairs = av_pairs.pack()
 

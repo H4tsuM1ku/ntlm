@@ -6,6 +6,7 @@ from .compute import *
 __all__ = [
 	"Z",
 	"nonce",
+	"rc4k",
 	"LMOWFv1",
 	"NTOWFv1",
 	"LMOWFv2",

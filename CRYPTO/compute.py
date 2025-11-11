@@ -1,4 +1,4 @@
-from .utils import Z, md4, md5, hmac_md5, desl
+from .utils import Z, md4, md5, hmac_md5, desl, rc4k
 from ntlm.STRUCTURES import NTLMv2_CLIENT_CHALLENGE
 
 def compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, ClientChallenge):
@@ -25,8 +25,15 @@ def compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, Clien
 		NtChallengeResponse = NTProofStr + temp
 		LmChallengeResponse = hmac_md5(ResponseKeyNT, ServerChallenge + ClientChallenge) + ClientChallenge
 
-		SessionBaseKey = hmac_md5(ResponseKeyNT,NTProofStr)
+		SessionBaseKey = hmac_md5(ResponseKeyNT, NTProofStr)
 
 		return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey, temp)
 
 	return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey, Z(0))
+
+def compute_MIC():
+	if flags.dict["NEGOTIATE_KEY_EXCH"] and (flags.dict["NEGOTIATE_ALWAYS_SIGN"] or flags.dict["NEGOTIATE_SIGN"] or flags.dict["NEGOTIATE_SEAL"]):
+		ExportedSessionKey = rc4k(KeyExchangeKey, EncryptedRandomSessionKey)
+		return hmac_md5(ExportedSessionKey, negotiate+challenge+authenticate)
+	else:
+		return hmac_md5(KeyExchangeKey, negotiate+challenge+authenticate)
