@@ -1,3 +1,5 @@
+from ntlm.utils import Z
+from ntlm.constants import NUL
 import struct
 
 class VERSION(object):
@@ -31,21 +33,34 @@ class VERSION(object):
 		NTLMSSP in use. This field SHOULD contain the following value 0x0F.
 	"""
 	def __init__(self):
-		self.ProductMajorVersion = 0x0
-		self.ProductMinorVersion = 0x0
-		self.ProductBuild = 0x0
-		self.Reserved = 0x0
-		self.NTLMRevisionCurrent = 0x0
+		self.ProductMajorVersion = NUL
+		self.ProductMinorVersion = NUL
+		self.ProductBuild = NUL
+		self.Reserved = Z(3)
+		self.NTLMRevisionCurrent = NUL
 
-	def pack(self):
+	def set_version(self, major_version=NUL, minor_version=NUL, build=NUL, revision=NUL):
+		self.ProductMajorVersion = major_version
+		self.ProductMinorVersion = minor_version
+		self.ProductBuild = build
+		self.NTLMRevisionCurrent = revision
+
+		return self
+
+	def to_bytes(self):
+		self.ProductMajorVersion 	= struct.pack("B", self.ProductMajorVersion)
+		self.ProductMinorVersion	= struct.pack("B", self.ProductMinorVersion)
+		self.ProductBuild 			= struct.pack("<H", self.ProductBuild)
+		self.NTLMRevisionCurrent 	= struct.pack("B", self.NTLMRevisionCurrent)
+
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
 
-	def get_version(self, major_version=0, minor_version=0, build=0, revision=0):
-		self.ProductMajorVersion = struct.pack('B', major_version)
-		self.ProductMinorVersion = struct.pack('B', minor_version)
-		self.ProductBuild = struct.pack('<H', build)
-		self.Reserved = struct.pack('3B', 0x0, 0x0, 0x0)
-		self.NTLMRevisionCurrent = struct.pack('B', revision)
+	def from_bytes(self, message_bytes):
+		self.ProductMajorVersion 	= struct.unpack("B", message_bytes[0])
+		self.ProductMinorVersion	= struct.unpack("B", message_bytes[1])
+		self.ProductBuild 			= struct.unpack("<H", message_bytes[2:4])
+		self.Reserved 				= struct.unpack("3B", message_bytes[4:7]) 
+		self.NTLMRevisionCurrent 	= struct.unpack("B", message_bytes[7])
 
-		return self.pack()
+		return self

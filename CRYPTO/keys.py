@@ -1,4 +1,5 @@
-from .utils import Z, des, md5, md4, hmac_md5
+from .utils import des, md5, md4, hmac_md5
+from ntlm.utils import Z
 from ntlm.constants import NTLMSSP_REVISION_W2K3
 
 def KXKEY(flags, SessionBaseKey, ResponseKeyLM, ServerChallenge, LmChallengeResponse):

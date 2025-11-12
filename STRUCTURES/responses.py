@@ -1,4 +1,4 @@
-from ntlm.CRYPTO import Z, nonce
+from ntlm.utils import Z
 import struct
 
 class LM_RESPONSE(object):

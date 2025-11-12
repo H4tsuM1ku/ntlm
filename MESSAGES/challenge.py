@@ -1,6 +1,6 @@
 from .base import MESSAGE, FIELDS
+from ntlm.utils import nonce, Z
 from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmChallenge, MsvAvEOL
-from ntlm.CRYPTO import Z, nonce
 from ntlm.STRUCTURES import VERSION, AV_PAIR_LIST
 import struct
 
@@ -11,7 +11,6 @@ class CHALLENGE(MESSAGE):
 
 		offset = 56
 		encoding = super(CHALLENGE, self).charset(flags, oem_encoding)
-		version = VERSION()
 
 		target_name = Z(0)
 		if (flags.dict["REQUEST_TARGET"] or flags.dict["TARGET_TYPE_SERVER"] or flags.dict["TARGET_TYPE_DOMAIN"]) and len(infos["target"]):
@@ -19,16 +18,16 @@ class CHALLENGE(MESSAGE):
 		
 		target_info = AV_PAIR_LIST(av_list) if flags.dict["NEGOTIATE_TARGET_INFO"] else AV_PAIR_LIST()
 
-		self.TargetNameFields, offset = FIELDS(target_name, offset).pack(), offset + len(target_name)
-		self.TargetInfoFields, offset = FIELDS(target_info, offset).pack(), offset + len(target_info)
+		self.TargetNameFields, offset = FIELDS(target_name, offset), offset + len(target_name)
+		self.TargetInfoFields, offset = FIELDS(target_info, offset), offset + len(target_info)
 
-		self.NegotiateFlags = flags.pack
-		self.ServerChallenge = struct.pack("<Q", nonce(64))
+		self.NegotiateFlags = flags
+		self.ServerChallenge = nonce(64)
 		self.Reserved = Z(8)
 
-		self.Version = version.get_version()
+		self.Version = VERSION()
 		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version = version.get_version(*version_infos, NTLMSSP_REVISION_W2K3)
+			self.Version.set_version(*version_infos, NTLMSSP_REVISION_W2K3)
 
-		self.Payload += struct.pack(f"<{len(target_name)}s", target_name)
-		self.Payload += target_info.pack()
+		self.Payload += target_name
+		self.Payload += target_info.to_bytes()

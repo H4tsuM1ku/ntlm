@@ -1,7 +1,8 @@
 from .base import MESSAGE, FIELDS
+from ntlm.utils import nonce, Z
 from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmAuthenticate, MsvAvFlags
 from ntlm.STRUCTURES import VERSION, LM_RESPONSE, LMv2_RESPONSE, NTLM_RESPONSE, NTLMv2_RESPONSE
-from ntlm.CRYPTO import Z, nonce, rc4k, compute_response, KXKEY, SIGNKEY, SEALKEY
+from ntlm.CRYPTO import rc4k, compute_response, KXKEY, SIGNKEY, SEALKEY
 import struct
 
 class AUTHENTICATE(MESSAGE):
@@ -35,35 +36,35 @@ class AUTHENTICATE(MESSAGE):
 			ServerSigningKey = SIGNKEY(flags, ExportedSessionKey, "Server") 
 			ClientSealingKey = SEALKEY(flags, ExportedSessionKey, infos["negotiate_message"].Version[-1], "Client") 
 			ServerSealingKey = SEALKEY(flags, ExportedSessionKey, infos["negotiate_message"].Version[-1], "Server")
-			
+
 		if flags.dict["NEGOTIATE_NTLM"] and flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
-			lm_response, nt_response = LM_RESPONSE(LmChallengeResponse).pack(), NTLM_RESPONSE(NtChallengeResponse).pack()
+			lm_response, nt_response = LM_RESPONSE(LmChallengeResponse), NTLM_RESPONSE(NtChallengeResponse)
 		else:
-			lm_response, nt_response = LMv2_RESPONSE(LmChallengeResponse, temp).pack(), NTLMv2_RESPONSE(NtChallengeResponse, temp).pack()
+			lm_response, nt_response = LMv2_RESPONSE(LmChallengeResponse, temp), NTLMv2_RESPONSE(NtChallengeResponse, temp)
 
-		self.LmChallengeResponseFields, offset = FIELDS(lm_response, offset).pack(), offset + len(lm_response)
-		self.NtChallengeResponseFields, offset = FIELDS(nt_response, offset).pack(), offset + len(nt_response)
+		self.LmChallengeResponseFields, offset = FIELDS(lm_response, offset), offset + len(lm_response)
+		self.NtChallengeResponseFields, offset = FIELDS(nt_response, offset), offset + len(nt_response)
 
-		self.DomainNameFields, offset = FIELDS(domain_name, offset).pack(), offset + len(domain_name)
-		self.UserNameFields, offset = FIELDS(user_name, offset).pack(), offset + len(user_name)
-		self.WorkstationFields, offset = FIELDS(workstation_name, offset).pack(), offset + len(workstation_name)
+		self.DomainNameFields, offset = FIELDS(domain_name, offset), offset + len(domain_name)
+		self.UserNameFields, offset = FIELDS(user_name, offset), offset + len(user_name)
+		self.WorkstationFields, offset = FIELDS(workstation_name, offset), offset + len(workstation_name)
 
-		self.EncryptedRandomSessionKeyFields, offset = FIELDS(EncryptedRandomSessionKey, offset).pack(), offset + len(EncryptedRandomSessionKey)
+		self.EncryptedRandomSessionKeyFields = FIELDS(EncryptedRandomSessionKey, offset)
 
-		self.NegotiateFlags = flags.pack
+		self.NegotiateFlags = flags
 
-		self.Version = version.get_version()
+		self.Version = VERSION()
 		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version = version.get_version(*version_infos, NTLMSSP_REVISION_W2K3)
+			self.Version.set_version(*version_infos, NTLMSSP_REVISION_W2K3)
 
 		self.MIC = Z(16)
 
 		self.Payload += lm_response
 		self.Payload += nt_response
-		self.Payload += struct.pack(f"<{len(domain_name)}s", domain_name)
-		self.Payload += struct.pack(f"<{len(user_name)}s", user_name)
-		self.Payload += struct.pack(f"<{len(workstation_name)}s", workstation_name)
+		self.Payload += domain_name
+		self.Payload += user_name
+		self.Payload += workstation_name
 		self.Payload += EncryptedRandomSessionKey
 
 		if MsvAvFlags in av_list and av_list[MsvAvFlags] & 0x00000002:
-			self.MIC = compute_MIC(infos["negotiate_message"], infos["server_challenge"], self.pack())
+			self.MIC = compute_MIC(infos["negotiate_message"], infos["server_challenge"], self)

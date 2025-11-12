@@ -1,4 +1,5 @@
-from .utils import Z, md4, md5, hmac_md5, desl, rc4k
+from .utils import md4, md5, hmac_md5, desl, rc4k
+from ntlm.utils import Z
 from ntlm.STRUCTURES import NTLMv2_CLIENT_CHALLENGE
 
 def compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, ClientChallenge):

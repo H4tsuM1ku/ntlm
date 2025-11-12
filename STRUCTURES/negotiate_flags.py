@@ -174,13 +174,17 @@ class NEGOTIATE_FLAGS(IntFlag):
 	NEGOTIATE_OEM						= NTLMSSP_NEGOTIATE_OEM
 	NEGOTIATE_UNICODE					= NTLMSSP_NEGOTIATE_UNICODE
 
-	@property
-	def pack(self):
-		return struct.pack("<I", self)
-
 	@cached_property
 	def dict(self):
 		return {flag.name: (1 if flag & self else 0) for flag in NEGOTIATE_FLAGS}
 
 	def clear(self):
-		return NEGOTIATE_FLAGS(0)
+		return NEGOTIATE_FLAGS(NUL)
+
+	def to_bytes(self):
+		return struct.pack("<I", self)
+
+	def from_bytes(self, message_bytes):
+		flags = struct.unpack("<I", message_bytes)
+
+		return NEGOTIATE_FLAGS(flags)

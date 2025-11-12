@@ -1,12 +1,6 @@
+from ntlm.utils import Z
 from Crypto.Cipher import DES, ARC4
 from Crypto.Hash import HMAC, MD5, MD4
-import secrets
-
-def Z(N):
-	return b"\x00"*N
-
-def nonce(N):
-	return secrets.randbits(N)
 
 def md4(message):
 	temp = MD4.new()
