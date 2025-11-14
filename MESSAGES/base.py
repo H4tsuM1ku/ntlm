@@ -45,6 +45,28 @@ class MESSAGE(object):
 				raise Exception("SEC_E_INVALID_TOKEN: You need to choose a character set encoding")
 		return encoding
 
+	def display_info(self, obj=None, indent=0):
+		class_objects = [
+			"NegotiateFlags", "DomainNameFields", "WorkstationFields", 
+			"TargetNameFields", "TargetInfoFields", "LmChallengeResponseFields", 
+			"NtChallengeResponseFields", "UserNameFields", "EncryptedRandomSessionKeyFields"
+		]
+
+		if obj is None:
+			obj = self
+
+		prefix = "\t" * indent
+
+		for attr in vars(obj):
+			print(f"{prefix}{attr}:", end=" ")
+
+			value = getattr(obj, attr)
+			if attr in class_objects:
+				print()
+				self.display_info(value, indent + 1)
+			else:
+				print(value)
+
 	def to_bytes(self):
 		message_type = self.MessageType
 
@@ -90,7 +112,7 @@ class MESSAGE(object):
 		elif message.MessageType == NtLmChallenge:
 			message.TargetNameFields	= FIELDS.from_bytes(message_bytes[12:20])
 			message.NegotiateFlags		= NEGOTIATE_FLAGS.from_bytes(message_bytes[20:24])
-			message.ServerChallenge		= FIELDS.from_bytes(message_bytes[24:32])
+			message.ServerChallenge		= struct.unpack("<Q", message_bytes[24:32])[0]
 			message.Reserved			= message_bytes[32:40]
 			message.TargetInfoFields	= FIELDS.from_bytes(message_bytes[40:48])
 			offset = 48
@@ -112,7 +134,7 @@ class MESSAGE(object):
 			message.MIC = message_bytes[offset:offset+16]
 			offset += 16
 
-		message.Payload = struct.unpack(f"{len(message_bytes)-offset}s", message_bytes[offset:])
+		message.Payload = struct.unpack(f"{len(message_bytes)-offset}s", message_bytes[offset:])[0]
 
 		return message
 
