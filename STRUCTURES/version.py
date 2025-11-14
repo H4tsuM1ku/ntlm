@@ -32,20 +32,12 @@ class VERSION(object):
 		An 8-bit unsigned integer that indicates the current revision of the
 		NTLMSSP in use. This field SHOULD contain the following value 0x0F.
 	"""
-	def __init__(self):
-		self.ProductMajorVersion = NUL
-		self.ProductMinorVersion = NUL
-		self.ProductBuild = NUL
-		self.Reserved = Z(3)
-		self.NTLMRevisionCurrent = NUL
-
-	def set_version(self, major_version=NUL, minor_version=NUL, build=NUL, revision=NUL):
+	def __init__(self, major_version=NUL, minor_version=NUL, build=NUL, revision=NUL):
 		self.ProductMajorVersion = major_version
 		self.ProductMinorVersion = minor_version
 		self.ProductBuild = build
+		self.Reserved = Z(3)
 		self.NTLMRevisionCurrent = revision
-
-		return self
 
 	def to_bytes(self):
 		self.ProductMajorVersion 	= struct.pack("B", self.ProductMajorVersion)
@@ -56,11 +48,14 @@ class VERSION(object):
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
 
-	def from_bytes(self, message_bytes):
-		self.ProductMajorVersion 	= struct.unpack("B", message_bytes[0])
-		self.ProductMinorVersion	= struct.unpack("B", message_bytes[1])
-		self.ProductBuild 			= struct.unpack("<H", message_bytes[2:4])
-		self.Reserved 				= struct.unpack("3B", message_bytes[4:7]) 
-		self.NTLMRevisionCurrent 	= struct.unpack("B", message_bytes[7])
+	@classmethod
+	def from_bytes(cls, message_bytes):
+		version = cls()
+		
+		version.ProductMajorVersion 	= message_bytes[0]
+		version.ProductMinorVersion		= message_bytes[1]
+		version.ProductBuild 			= struct.unpack("<H", message_bytes[2:4])[0]
+		version.Reserved 				= struct.unpack("3B", message_bytes[4:7])[0]
+		version.NTLMRevisionCurrent 	= message_bytes[7]
 
-		return self
+		return version

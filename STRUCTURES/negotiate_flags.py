@@ -184,7 +184,8 @@ class NEGOTIATE_FLAGS(IntFlag):
 	def to_bytes(self):
 		return struct.pack("<I", self)
 
-	def from_bytes(self, message_bytes):
-		flags = struct.unpack("<I", message_bytes)
+	@classmethod
+	def from_bytes(cls, message_bytes):
+		flags = struct.unpack("<I", message_bytes)[0]
 
-		return NEGOTIATE_FLAGS(flags)
+		return cls(flags)

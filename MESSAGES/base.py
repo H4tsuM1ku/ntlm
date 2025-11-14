@@ -1,3 +1,4 @@
+from ntlm.utils import Z
 from ntlm.constants import NUL, NtLmNegotiate, NtLmChallenge, NtLmAuthenticate
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
 import struct
@@ -69,51 +70,55 @@ class MESSAGE(object):
 			self.NegotiateFlags						= self.NegotiateFlags.to_bytes()
 
 		self.Version = self.Version.to_bytes()
-		self.Payload = struct.pack(f"{len(self.Payload)}s", len(self.Payload))
+		self.Payload = struct.pack(f"{len(self.Payload)}s", self.Payload)
 
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
 
-	def from_bytes(self, message_bytes):
-		self.Signature = struct.unpack("8s", message_bytes[:8])
-		self.MessageType = struct.unpack("<I", message_bytes[8:12])
+	@classmethod
+	def from_bytes(cls, message_bytes):
+		message = cls()
 
-		if self.MessageType == NtLmNegotiate:
-			self.NegotiateFlags		= struct.unpack("<I", message_bytes[12:16])
-			self.DomainNameFields	= FIELDS.from_bytes(message_bytes[16:24])
-			self.WorkstationFields	= FIELDS.from_bytes(message_bytes[24:32])
+		message.Signature = struct.unpack("8s", message_bytes[:8])[0]
+		message.MessageType = struct.unpack("<I", message_bytes[8:12])[0]
+
+		if message.MessageType == NtLmNegotiate:
+			message.NegotiateFlags		= NEGOTIATE_FLAGS.from_bytes(message_bytes[12:16])
+			message.DomainNameFields	= FIELDS.from_bytes(message_bytes[16:24])
+			message.WorkstationFields	= FIELDS.from_bytes(message_bytes[24:32])
 			offset = 32
-		elif self.MessageType == NtLmChallenge:
-			self.TargetNameFields	= FIELDS.from_bytes(message_bytes[12:20])
-			self.NegotiateFlags		= NEGOTIATE_FLAGS.from_bytes(message_bytes[20:24])
-			self.ServerChallenge	= FIELDS.from_bytes(message_bytes[24:32])
-			self.Reserved			= message_bytes[32:40]
-			self.TargetInfoFields	= FIELDS.from_bytes(message_bytes[40:48])
+		elif message.MessageType == NtLmChallenge:
+			message.TargetNameFields	= FIELDS.from_bytes(message_bytes[12:20])
+			message.NegotiateFlags		= NEGOTIATE_FLAGS.from_bytes(message_bytes[20:24])
+			message.ServerChallenge		= FIELDS.from_bytes(message_bytes[24:32])
+			message.Reserved			= message_bytes[32:40]
+			message.TargetInfoFields	= FIELDS.from_bytes(message_bytes[40:48])
 			offset = 48
-		elif self.MessageType == NtLmAuthenticate:
-			self.LmChallengeResponseFields			= FIELDS.from_bytes(message_bytes[12:20])
-			self.NtChallengeResponseFields			= FIELDS.from_bytes(message_bytes[20:28])
-			self.DomainNameFields					= FIELDS.from_bytes(message_bytes[28:36])
-			self.UserNameFields						= FIELDS.from_bytes(message_bytes[36:44])
-			self.WorkstationFields					= FIELDS.from_bytes(message_bytes[44:52])
-			self.EncryptedRandomSessionKeyFields	= FIELDS.from_bytes(message_bytes[52:60])
-			self.NegotiateFlags						= NEGOTIATE_FLAGS.from_bytes(message_bytes[60:64])
+		elif message.MessageType == NtLmAuthenticate:
+			message.LmChallengeResponseFields			= FIELDS.from_bytes(message_bytes[12:20])
+			message.NtChallengeResponseFields			= FIELDS.from_bytes(message_bytes[20:28])
+			message.DomainNameFields					= FIELDS.from_bytes(message_bytes[28:36])
+			message.UserNameFields						= FIELDS.from_bytes(message_bytes[36:44])
+			message.WorkstationFields					= FIELDS.from_bytes(message_bytes[44:52])
+			message.EncryptedRandomSessionKeyFields		= FIELDS.from_bytes(message_bytes[52:60])
+			message.NegotiateFlags						= NEGOTIATE_FLAGS.from_bytes(message_bytes[60:64])
 			offset = 64
 
-		self.Version = VERSION.from_bytes(message_bytes[offset:offset+8])
-		offset += 8
+		if message.NegotiateFlags & NEGOTIATE_FLAGS.NEGOTIATE_VERSION:
+			message.Version = VERSION.from_bytes(message_bytes[offset:offset+8])
+			offset += 8
 
-		if self.MessageType == NtLmAuthenticate:
-			self.MIC = message_bytes[offset:offset+16]
+		if message.MessageType == NtLmAuthenticate:
+			message.MIC = message_bytes[offset:offset+16]
 			offset += 16
 
-		self.Payload = struct.unpack(f"{len(message_bytes)-offset}s", message_bytes[offset:])
+		message.Payload = struct.unpack(f"{len(message_bytes)-offset}s", message_bytes[offset:])
 
-		return self
+		return message
 
 class FIELDS(object):
 	"""docstring for Base MESSAGE"""
-	def __init__(self, name, offset):
+	def __init__(self, name=Z(0), offset=NUL):
 		self.NameLen = len(name)
 		self.NameMaxLen = self.NameLen
 
@@ -129,9 +134,12 @@ class FIELDS(object):
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
 
-	def from_bytes(self, message_bytes):
-		self.NameLen 			= struct.unpack("<H", message_bytes[:2])
-		self.NameMaxLen 		= struct.unpack("<H", message_bytes[2:4])
-		self.NameBufferOffset 	= struct.unpack("<I", message_bytes[4:])
+	@classmethod
+	def from_bytes(cls, message_bytes):
+		field = cls()
 
-		return self
+		field.NameLen 			= struct.unpack("<H", message_bytes[:2])[0]
+		field.NameMaxLen 		= struct.unpack("<H", message_bytes[2:4])[0]
+		field.NameBufferOffset 	= struct.unpack("<I", message_bytes[4:])[0]
+
+		return field

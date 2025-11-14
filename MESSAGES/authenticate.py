@@ -1,18 +1,16 @@
 from .base import MESSAGE, FIELDS
 from ntlm.utils import nonce, Z
 from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmAuthenticate, MsvAvFlags
-from ntlm.STRUCTURES import VERSION, LM_RESPONSE, LMv2_RESPONSE, NTLM_RESPONSE, NTLMv2_RESPONSE
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, LM_RESPONSE, LMv2_RESPONSE, NTLM_RESPONSE, NTLMv2_RESPONSE
 from ntlm.CRYPTO import rc4k, compute_response, KXKEY, SIGNKEY, SEALKEY
 import struct
 
 class AUTHENTICATE(MESSAGE):
 	"""docstring for AUTHENTICATE"""
-	def __init__(self, flags, infos={}, av_list={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
+	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos={}, av_list={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
 		super(AUTHENTICATE, self).__init__(NtLmAuthenticate)
 
-		offset = 88
 		encoding = super(AUTHENTICATE, self).charset(flags, oem_encoding)
-		version = VERSION()
 
 		domain_name = infos["domain"].encode(encoding) if flags.dict["NEGOTIATE_OEM_DOMAIN_SUPPLIED"] and len(infos["domain"]) else Z(0)
 		user_name = infos["user"].encode(encoding) if infos["user"] else Z(0)
@@ -42,6 +40,12 @@ class AUTHENTICATE(MESSAGE):
 		else:
 			lm_response, nt_response = LMv2_RESPONSE(LmChallengeResponse, temp), NTLMv2_RESPONSE(NtChallengeResponse, temp)
 
+		offset = 80
+		self.Version = Z(0)
+		if flags.dict["NEGOTIATE_VERSION"]:
+			self.Version = VERSION(*version_infos, NTLMSSP_REVISION_W2K3)
+			offset += 8
+	
 		self.LmChallengeResponseFields, offset = FIELDS(lm_response, offset), offset + len(lm_response)
 		self.NtChallengeResponseFields, offset = FIELDS(nt_response, offset), offset + len(nt_response)
 
@@ -52,10 +56,6 @@ class AUTHENTICATE(MESSAGE):
 		self.EncryptedRandomSessionKeyFields = FIELDS(EncryptedRandomSessionKey, offset)
 
 		self.NegotiateFlags = flags
-
-		self.Version = VERSION()
-		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version.set_version(*version_infos, NTLMSSP_REVISION_W2K3)
 
 		self.MIC = Z(16)
 

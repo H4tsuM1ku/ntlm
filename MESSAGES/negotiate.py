@@ -1,15 +1,14 @@
 from .base import MESSAGE, FIELDS
 from ntlm.utils import Z
 from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmNegotiate
-from ntlm.STRUCTURES import VERSION
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
 import struct
 
 class NEGOTIATE(MESSAGE):
 	"""docstring for NEGOTIATE"""
-	def __init__(self, flags, infos={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
+	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
 		super(NEGOTIATE, self).__init__(NtLmNegotiate)
 
-		offset = 40
 		encoding = super(NEGOTIATE, self).charset(flags, oem_encoding)
 
 		domain_name = infos["domain"].encode(encoding) if flags.dict["NEGOTIATE_OEM_DOMAIN_SUPPLIED"] and len(infos["domain"]) else Z(0)
@@ -17,12 +16,14 @@ class NEGOTIATE(MESSAGE):
 
 		self.NegotiateFlags = flags
 
+		offset = 32
+		self.Version = Z(0)
+		if flags.dict["NEGOTIATE_VERSION"]:
+			self.Version = VERSION(*version_infos, NTLMSSP_REVISION_W2K3)
+			offset += 8
+
 		self.DomainNameFields, offset = FIELDS(domain_name, offset), offset + len(domain_name)
 		self.WorkstationFields, offset = FIELDS(workstation_name, offset), offset + len(workstation_name)
-
-		self.Version = VERSION()
-		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version.set_version(*version_infos, NTLMSSP_REVISION_W2K3)
 
 		self.Payload += domain_name
 		self.Payload += workstation_name

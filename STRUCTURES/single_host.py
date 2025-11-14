@@ -19,10 +19,13 @@ class SINGLE_HOST(object):
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)
 
-	def from_bytes(self, message_bytes):
-		self.Size 		= struct.unpack("<I", message_bytes[:4])
-		self.Z4 		= struct.unpack("<I", message_bytes[4:8])
-		self.CustomData = struct.unpack("<I", message_bytes[8:16])
-		self.MachineID 	= message_bytes[16:]
+	@classmethod
+	def from_bytes(cls, message_bytes):
+		single_host = cls()
 
-		return self
+		single_host.Size 		= struct.unpack("<I", message_bytes[:4])[0]
+		single_host.Z4 			= struct.unpack("<I", message_bytes[4:8])[0]
+		single_host.CustomData 	= struct.unpack("<I", message_bytes[8:16])[0]
+		single_host.MachineID 	= message_bytes[16:]
+
+		return single_host
