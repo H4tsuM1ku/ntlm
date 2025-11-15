@@ -5,7 +5,7 @@ import struct
 
 class MESSAGE(object):
 	"""docstring for Base MESSAGE"""
-	def __init__(self, message_type):
+	def __init__(self, message_type=NUL):
 		self.Signature = b'NTLMSSP\0'
 		self.MessageType = message_type
 
@@ -49,7 +49,8 @@ class MESSAGE(object):
 		class_objects = [
 			"NegotiateFlags", "DomainNameFields", "WorkstationFields", 
 			"TargetNameFields", "TargetInfoFields", "LmChallengeResponseFields", 
-			"NtChallengeResponseFields", "UserNameFields", "EncryptedRandomSessionKeyFields"
+			"NtChallengeResponseFields", "UserNameFields", "EncryptedRandomSessionKeyFields",
+			"Version"
 		]
 
 		if obj is None:
@@ -69,6 +70,7 @@ class MESSAGE(object):
 
 	def to_bytes(self):
 		message_type = self.MessageType
+		negotiate_flags = self.NegotiateFlags
 
 		self.Signature = struct.pack("8s", self.Signature)
 		self.MessageType = struct.pack("<I", self.MessageType)
@@ -91,7 +93,9 @@ class MESSAGE(object):
 			self.EncryptedRandomSessionKeyFields	= self.EncryptedRandomSessionKeyFields.to_bytes()
 			self.NegotiateFlags						= self.NegotiateFlags.to_bytes()
 
-		self.Version = self.Version.to_bytes()
+		if negotiate_flags & NEGOTIATE_FLAGS.NEGOTIATE_VERSION:
+			self.Version = self.Version.to_bytes()
+
 		self.Payload = struct.pack(f"{len(self.Payload)}s", self.Payload)
 
 		values = [getattr(self, attr) for attr in vars(self)]
