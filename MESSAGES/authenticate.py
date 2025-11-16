@@ -1,27 +1,37 @@
 from .base import MESSAGE, FIELDS
 from ntlm.utils import nonce, Z
 from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmAuthenticate, MsvAvFlags
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, LM_RESPONSE, LMv2_RESPONSE, NTLM_RESPONSE, NTLMv2_RESPONSE
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, RESPONSE
 from ntlm.CRYPTO import rc4k, compute_response, KXKEY, SIGNKEY, SEALKEY
-import struct
 
 class AUTHENTICATE(MESSAGE):
 	"""docstring for AUTHENTICATE"""
-	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos={}, av_list={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
+	def __init__(self, flags=NEGOTIATE_FLAGS(0x40000201), infos={}, av_list={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
 		super(AUTHENTICATE, self).__init__(NtLmAuthenticate)
 
 		encoding = super(AUTHENTICATE, self).charset(flags, oem_encoding)
 
-		domain_name = infos["domain"].encode(encoding) if flags.dict["NEGOTIATE_OEM_DOMAIN_SUPPLIED"] and len(infos["domain"]) else Z(0)
-		user_name = infos["user"].encode(encoding) if infos["user"] else Z(0)
-		workstation_name = infos["workstation"].encode(encoding) if flags.dict["NEGOTIATE_OEM_WORKSTATION_SUPPLIED"] and len(infos["workstation"]) else Z(0)
+		try:
+			if len(infos["user"]):
+				user_name = infos["user"].encode(encoding)
+			if len(infos["password"]):
+				password = infos["password"]
+			if len(infos["server_challenge"]):
+				server_challenge = infos["server_challenge"]
+			if len(infos["domain"]) and flags.dict["NEGOTIATE_OEM_DOMAIN_SUPPLIED"]:
+				domain_name = infos["domain"].encode(encoding)
+			if len(infos["workstation"]) and flags.dict["NEGOTIATE_OEM_WORKSTATION_SUPPLIED"]:
+				workstation_name = infos["workstation"].encode(encoding)
+		except:
+			domain_name, user_name, workstation_name = (Z(0),)*3
+			password = ""
+			server_challenge = nonce(64)
+
 		client_challenge = nonce(64)
-		server_challenge = infos["server_challenge"]
-		ResponseKeyNT, ResponseKeyLM = infos["NT_hash"], infos["LM_hash"]
 
 		if flags.dict["NEGOTIATE_KEY_EXCH"]:
-			LmChallengeResponse, NtChallengeResponse, SessionKey, temp = compute_response(flags,  ResponseKeyNT, ResponseKeyLM, server_challenge, client_challenge)
-			KeyExchangeKey = KXKEY(flags, SessionKey, ResponseKeyLM, server_challenge, LmChallengeResponse)
+			LmChallengeResponse, NtChallengeResponse, SessionKey, temp = compute_response(flags, password, server_challenge, client_challenge)
+			KeyExchangeKey = KXKEY(flags, SessionKey, password, server_challenge, LmChallengeResponse)
 			
 			if flags.dict["NEGOTIATE_SIGN"] or flags.dict["NEGOTIATE_SEAL"]:
 				ExportedSessionKey = struct.pack("<I", nonce(16))
@@ -30,15 +40,10 @@ class AUTHENTICATE(MESSAGE):
 				ExportedSessionKey = KeyExchangeKey
 				EncryptedRandomSessionKey = Z(0)
 
-			ClientSigningKey = SIGNKEY(flags, ExportedSessionKey, "Client") 
-			ServerSigningKey = SIGNKEY(flags, ExportedSessionKey, "Server") 
-			ClientSealingKey = SEALKEY(flags, ExportedSessionKey, infos["negotiate_message"].Version[-1], "Client") 
-			ServerSealingKey = SEALKEY(flags, ExportedSessionKey, infos["negotiate_message"].Version[-1], "Server")
-
 		if flags.dict["NEGOTIATE_NTLM"] and flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
-			lm_response, nt_response = LM_RESPONSE(LmChallengeResponse), NTLM_RESPONSE(NtChallengeResponse)
+			lm_response, nt_response = RESPONSE(LmChallengeResponse, 2, temp), RESPONSE(NtChallengeResponse, 2, temp)
 		else:
-			lm_response, nt_response = LMv2_RESPONSE(LmChallengeResponse, temp), NTLMv2_RESPONSE(NtChallengeResponse, temp)
+			lm_response, nt_response = RESPONSE(LmChallengeResponse), RESPONSE(NtChallengeResponse)
 
 		offset = 80
 		self.Version = Z(0)
@@ -59,12 +64,14 @@ class AUTHENTICATE(MESSAGE):
 
 		self.MIC = Z(16)
 
-		self.Payload += lm_response
-		self.Payload += nt_response
+		self.Payload += lm_response.to_bytes()
+		self.Payload += nt_response.to_bytes()
 		self.Payload += domain_name
 		self.Payload += user_name
 		self.Payload += workstation_name
 		self.Payload += EncryptedRandomSessionKey
 
-		if MsvAvFlags in av_list and av_list[MsvAvFlags] & 0x00000002:
-			self.MIC = compute_MIC(infos["negotiate_message"], infos["server_challenge"], self)
+		if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and MsvAvFlags in av_list and av_list[MsvAvFlags] & 0x00000002:
+			self.MIC = compute_MIC(infos["negotiate_message"], server_challenge, self)
+		else:
+			self.MIC = Z(0)

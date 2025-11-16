@@ -1,6 +1,6 @@
 from ntlm.utils import Z
-from ntlm.constants import NUL, NtLmNegotiate, NtLmChallenge, NtLmAuthenticate
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
+from ntlm.constants import NUL, NtLmNegotiate, NtLmChallenge, NtLmAuthenticate, MsvAvFlags
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, NTLMv2_CLIENT_CHALLENGE, VERSION
 import struct
 
 class MESSAGE(object):
@@ -59,9 +59,11 @@ class MESSAGE(object):
 		prefix = "\t" * indent
 
 		for attr in vars(obj):
-			print(f"{prefix}{attr}:", end=" ")
-
 			value = getattr(obj, attr)
+			if not value:
+				continue
+
+			print(f"{prefix}{attr}:", end=" ")
 			if attr in class_objects:
 				print()
 				self.display_info(value, indent + 1)
@@ -82,7 +84,6 @@ class MESSAGE(object):
 		elif message_type == NtLmChallenge:
 			self.TargetNameFields	= self.TargetNameFields.to_bytes()
 			self.NegotiateFlags		= self.NegotiateFlags.to_bytes()
-			self.ServerChallenge	= struct.pack("<Q", self.ServerChallenge)
 			self.TargetInfoFields	= self.TargetInfoFields.to_bytes()
 		elif message_type == NtLmAuthenticate:
 			self.LmChallengeResponseFields			= self.LmChallengeResponseFields.to_bytes()
@@ -116,7 +117,7 @@ class MESSAGE(object):
 		elif message.MessageType == NtLmChallenge:
 			message.TargetNameFields	= FIELDS.from_bytes(message_bytes[12:20])
 			message.NegotiateFlags		= NEGOTIATE_FLAGS.from_bytes(message_bytes[20:24])
-			message.ServerChallenge		= struct.unpack("<Q", message_bytes[24:32])[0]
+			message.ServerChallenge		= message_bytes[24:32]
 			message.Reserved			= message_bytes[32:40]
 			message.TargetInfoFields	= FIELDS.from_bytes(message_bytes[40:48])
 			offset = 48
@@ -135,8 +136,15 @@ class MESSAGE(object):
 			offset += 8
 
 		if message.MessageType == NtLmAuthenticate:
-			message.MIC = message_bytes[offset:offset+16]
-			offset += 16
+			if message.NtChallengeResponseFields.NameLen > 24:
+				client_challenge = NTLMv2_CLIENT_CHALLENGE.from_bytes(message_bytes[message.NtChallengeResponseFields.NameBufferOffset+24:])
+				av_pairs = client_challenge.AvPairs.av_pairs
+
+				for av_pair in av_pairs:
+					if av_pair.av_id == MsvAvFlags and av_pair.value & 0x00000002 and message.NegotiateFlags & NEGOTIATE_FLAGS.NEGOTIATE_EXTENDED_SESSIONSECURITY:
+						message.MIC = message_bytes[offset:offset+16]
+						offset += 16
+						break
 
 		message.Payload = struct.unpack(f"{len(message_bytes)-offset}s", message_bytes[offset:])[0]
 

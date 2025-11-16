@@ -2,7 +2,6 @@ from .base import MESSAGE, FIELDS
 from ntlm.utils import Z
 from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmNegotiate
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
-import struct
 
 class NEGOTIATE(MESSAGE):
 	"""docstring for NEGOTIATE"""

@@ -1,13 +1,15 @@
 from .utils import md4, md5, hmac_md5, desl, rc4k
 from ntlm.utils import Z
+from ntlm.CRYPTO import LMOWFv1, NTOWFv1, LMOWFv2, NTOWFv1
 from ntlm.STRUCTURES import NTLMv2_CLIENT_CHALLENGE
 
-def compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, ClientChallenge):
+def compute_response(flags, password, ServerChallenge, ClientChallenge):
 	if flags.dict["ANONYMOUS"]:
 		NtChallengeResponse = Z(1)
 		LmChallengeResponse = Z(1)
 
 	if flags.dict["NEGOTIATE_NTLM"]:
+		ResponseKeyNT, ResponseKeyLM = NTOWFv1(password), LMOWFv1(password)
 		if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
 			NtChallengeResponse = desl(ResponseKeyNT, md5(ServerChallenge + ClientChallenge)[:8])
 			LmChallengeResponse = ClientChallenge + Z(16)
@@ -20,6 +22,8 @@ def compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, Clien
 
 		SessionBaseKey = md4(ResponseKeyNT)
 	else:
+		ResponseKeyNT, ResponseKeyLM = NTOWFv2(password), LMOWFv2(password)
+
 		temp = NTLMv2_CLIENT_CHALLENGE().pack()
 		NTProofStr = hmac_md5(ResponseKeyNT, ServerChallenge + temp)
 
@@ -35,6 +39,6 @@ def compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, Clien
 def compute_MIC():
 	if flags.dict["NEGOTIATE_KEY_EXCH"] and (flags.dict["NEGOTIATE_ALWAYS_SIGN"] or flags.dict["NEGOTIATE_SIGN"] or flags.dict["NEGOTIATE_SEAL"]):
 		ExportedSessionKey = rc4k(KeyExchangeKey, EncryptedRandomSessionKey)
-		return hmac_md5(ExportedSessionKey, negotiate+challenge+authenticate)
+		return hmac_md5(ExportedSessionKey, negotiate + challenge + authenticate)
 	else:
-		return hmac_md5(KeyExchangeKey, negotiate+challenge+authenticate)
+		return hmac_md5(KeyExchangeKey, negotiate + challenge + authenticate)

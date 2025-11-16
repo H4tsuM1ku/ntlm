@@ -1,9 +1,13 @@
-from .negotiate import NEGOTIATE
-from .challenge import CHALLENGE
-from .authenticate import AUTHENTICATE
+def __getattr__(name):
+	match name:
+		case "NEGOTIATE":
+			from .negotiate import NEGOTIATE
+			return NEGOTIATE
+		case "CHALLENGE":
+			from .challenge import CHALLENGE
+			return CHALLENGE
+		case "AUTHENTICATE":
+			from .authenticate import AUTHENTICATE
+			return AUTHENTICATE
 
-__all__ = [
-	"NEGOTIATE",
-	"CHALLENGE",
-	"AUTHENTICATE"
-]
+	raise AttributeError(f"module {__name__} has no attribute {name}")

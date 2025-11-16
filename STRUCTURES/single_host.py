@@ -14,7 +14,6 @@ class SINGLE_HOST(object):
 
 	def to_bytes(self):
 		self.Size = struct.pack("<I", self.Size)
-		self.MachineID = self.MachineID.to_bytes(32, 'little')
 
 		values = [getattr(self, attr) for attr in vars(self)]
 		return b"".join(values)

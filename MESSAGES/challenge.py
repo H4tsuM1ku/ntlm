@@ -2,7 +2,6 @@ from .base import MESSAGE, FIELDS
 from ntlm.utils import nonce, Z
 from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmChallenge, MsvAvEOL
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, AV_PAIR_LIST
-import struct
 
 class CHALLENGE(MESSAGE):
 	"""docstring for CHALLENGE"""
