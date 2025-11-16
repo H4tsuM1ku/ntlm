@@ -5,15 +5,15 @@ This project aims to provide a clear and modular foundation for working with NTL
 ## Project Structure
 ```
 .
-├── __init__.py
-├── constants.py		# NTLM Constants
+├── constants.py		# NTLM Constants and other constants
+├── utils.py			# Global helpers (such as nonce, Z)
 ├── requirements.txt	# "List" of Python packages required (there is only one which is pycryptodome — seriously, who hasn't this lib???)
 ├── CRYPTO
 │   ├── __init__.py
-│   ├── compute.py		# High-level crypto operations
+│   ├── compute.py		# Compute response and MIC
 │   ├── hashing.py		# Hash functions (NTOWF/LMOWF)
 │   ├── keys.py			# Key derivation
-│   └── utils.py		# (Non-specific) Cryptographic helpers (such as nonce)
+│   └── utils.py		# Cryptographic helpers
 ├── MESSAGES
 │   ├── __init__.py
 │   ├── authenticate.py	# NTLM AUTHENTICATE_MESSAGE structure
@@ -28,11 +28,12 @@ This project aims to provide a clear and modular foundation for working with NTL
     ├── single_host.py		# SINGLE_HOST structure
     └── version.py			# VERSION structure
 
-4 directories, 19 files
+4 directories, 20 files
 ```
 
-The codebase is divided into three main packages and a file:
-- **constants.py** – Defines NTLM constants and protocol values.
+The codebase is divided into three main packages and two files:
+- **constants.py** — Defines NTLM constants and protocol values.
+- **utils.py** — Defines small shared helpers used across the project.
 - **CRYPTO/** — Contains generic cryptographic helpers and low-level primitives used throughout NTLM.
 - **MESSAGES/** — Contains the main NTLM message types.
 - **STRUCTURES/** — Contains low-level NTLM data structures reused by messages.
@@ -45,12 +46,12 @@ NTLM (NT LAN Manager) is an authentication protocol used in various Microsoft ne
 This project focuses on *parsing, constructing, and serializing* NTLM messages in a readable way.
 
 For now :
- - Negotiate Message is working theorically... — I haven’t tested it in real communication yet.
- - Same for Challenge Message!
- - Working on Authenticate Message, soon the end.
- - Almost all structures are implemented, same for crypto functions (missing RC4).
- - Some bugs for fully use NTLMv2.
- - MIC and Channel Bindings are not supported yet :'(
+ - Negotiate Message, Challenge Message and Authenticate Message are finally working — I haven’t tested it in real communication yet.
+ - Messages can be parsed/serialized using from_bytes and to_bytes methods.
+ - All crypto functions are implemented, same for structures except NTLMSSP_MESSAGE_SIGNATURE.
+ - Can fully use NTLMv1/NTLMv2.
+ - MIC is supported!
+ - Channel Bindings is not supported yet :'(
 
 There is many things to improve, but I’ll focus on that once everything's working. (quite a liar.. sorry ^^')
 
@@ -58,80 +59,60 @@ There is many things to improve, but I’ll focus on that once everything's work
 #### literally my test.py
 
 ```python
-from ntlm.constants import WINDOWS_MAJOR_VERSION_6, WINDOWS_MINOR_VERSION_0
-from ntlm.CRYPTO import LMOWFv1, NTOWFv1
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS
-from ntlm.MESSAGES import NEGOTIATE, CHALLENGE
+from ntlm.constants import WINDOWS_MAJOR_VERSION_10, WINDOWS_MINOR_VERSION_0
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, AV_PAIR_LIST
+from ntlm.MESSAGES import NEGOTIATE, CHALLENGE, AUTHENTICATE
 
 
-flags = NEGOTIATE_FLAGS.NEGOTIATE_UNICODE\
-        | NEGOTIATE_FLAGS.NEGOTIATE_VERSION\
-        | NEGOTIATE_FLAGS.NEGOTIATE_OEM_DOMAIN_SUPPLIED\
-        | NEGOTIATE_FLAGS.NEGOTIATE_OEM_WORKSTATION_SUPPLIED
-
-infos = {
-    "domain": "MIKU.WORLD",
-    "workstation": "Hatsu",
-    "NT_hash": NTOWFv1("World"),
-    "LM_hash": LMOWFv1("is"),
-    "user": "Mine",
-    "target": "Server"
-}
-
-version = (WINDOWS_MAJOR_VERSION_6, WINDOWS_MINOR_VERSION_0, 0x4444)
-
-negotiate_message = NEGOTIATE(flags, infos, version)
-print(negotiate_message.pack())
-
-flags = flags.clear()
-flags |= NEGOTIATE_FLAGS.NEGOTIATE_KEY_EXCH\
-        | NEGOTIATE_FLAGS.NEGOTIATE_56\
+flags = NEGOTIATE_FLAGS.NEGOTIATE_56\
+        | NEGOTIATE_FLAGS.NEGOTIATE_KEY_EXCH\
         | NEGOTIATE_FLAGS.NEGOTIATE_128\
         | NEGOTIATE_FLAGS.NEGOTIATE_VERSION\
-        | NEGOTIATE_FLAGS.TARGET_TYPE_SERVER\
+        | NEGOTIATE_FLAGS.NEGOTIATE_TARGET_INFO\
+        | NEGOTIATE_FLAGS.NEGOTIATE_EXTENDED_SESSIONSECURITY\
+        | NEGOTIATE_FLAGS.TARGET_TYPE_DOMAIN\
         | NEGOTIATE_FLAGS.NEGOTIATE_ALWAYS_SIGN\
         | NEGOTIATE_FLAGS.NEGOTIATE_NTLM\
         | NEGOTIATE_FLAGS.NEGOTIATE_SEAL\
         | NEGOTIATE_FLAGS.NEGOTIATE_SIGN\
-        | NEGOTIATE_FLAGS.NEGOTIATE_OEM\
+        | NEGOTIATE_FLAGS.REQUEST_TARGET\
         | NEGOTIATE_FLAGS.NEGOTIATE_UNICODE
 
-challenge_message = CHALLENGE(flags, infos, {}, version)
-print(challenge_message.pack())
-```
+infos = {
+    "domain": "Domain",
+    "workstation": "Computer",
+    "user": "User",
+    "target": "Server",
+    "password": "Password"
+}
 
-#### test.py crypto part
+version = (WINDOWS_MAJOR_VERSION_10, WINDOWS_MINOR_VERSION_0, 17763)
 
-The constants are from the documentation and have been checked with documentation examples, you can compare them.
+negotiate_message = NEGOTIATE(flags, infos, version)
+print(negotiate_message.to_bytes())
 
-```python
-from ntlm.CRYPTO import *
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS
+challenge_message = CHALLENGE(flags, infos, version)
+print(challenge_message.to_bytes())
 
-ServerChallenge = b"\x01\x23\x45\x67\x89\xab\xcd\xef"
-ClientChallenge = b"\xaa"*8
-RandomSessionKey = b"\x55"*16
+if challenge_message.TargetInfoFields.Len:
+        target_info = AV_PAIR_LIST.from_bytes(challenge_message.Payload[challenge_message.TargetNameFields.Len:])
+        infos["target_info"] = target_info
 
-ResponseKeyLM = LMOWFv1("Password")
-ResponseKeyNT = NTOWFv1("Password")
+infos["negotiate_message"] = negotiate_message.to_bytes()
+infos["server_challenge"] = challenge_message.ServerChallenge
 
-# NTLM v1 no extended security
+authenticate_message = AUTHENTICATE(flags, infos, version)
+print(authenticate_message.to_bytes())
 
-flags = NEGOTIATE_FLAGS.NEGOTIATE_NTLM | NEGOTIATE_FLAGS.NEGOTIATE_LM_KEY
+print("\n#--- DEBUG ---#\n")
+print("\n--- NEGOTIATE MESSAGE ---")
+negotiate_message.display_info()
 
-LmChallengeResponse, NtChallengeResponse, SessionBaseKey = compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, ClientChallenge)
-KeyExchangeKey = KXKEY(flags, SessionBaseKey, ResponseKeyLM, ServerChallenge, LmChallengeResponse)
+print("\n--- CHALLENGE MESSAGE ---")
+challenge_message.display_info()
 
-print(LmChallengeResponse, NtChallengeResponse, SessionBaseKey, KeyExchangeKey)
-
-# NTLM v1 extended security
-
-flags = NEGOTIATE_FLAGS.NEGOTIATE_NTLM | NEGOTIATE_FLAGS.NEGOTIATE_EXTENDED_SESSIONSECURITY
-
-LmChallengeResponse, NtChallengeResponse, SessionBaseKey = compute_response(flags, ResponseKeyNT, ResponseKeyLM, ServerChallenge, ClientChallenge)
-KeyExchangeKey = KXKEY(flags, SessionBaseKey, ResponseKeyNT, ServerChallenge, LmChallengeResponse)
-
-print(LmChallengeResponse, NtChallengeResponse, SessionBaseKey, KeyExchangeKey)
+print("\n--- AUTHENTICATE MESSAGE ---")
+authenticate_message.display_info()
 ```
 
 Developed by Hatsu with so many 💖💖💖<br>
