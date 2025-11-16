@@ -1,6 +1,6 @@
 from .base import MESSAGE, FIELDS
 from ntlm.utils import nonce, Z
-from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmChallenge, \
+from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NtLmChallenge, \
 							MsvAvNbComputerName, MsvAvNbDomainName,\
 							MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName,\
 							MsvAvFlags, MsvAvTimestamp, MsvAvSingleHost, MsvAvTargetName,\
@@ -9,7 +9,7 @@ from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, AV_PAIR_LIST
 
 class CHALLENGE(MESSAGE):
 	"""docstring for CHALLENGE"""
-	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
+	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
 		super(CHALLENGE, self).__init__(NtLmChallenge)
 
 		encoding = super(CHALLENGE, self).charset(flags, oem_encoding)

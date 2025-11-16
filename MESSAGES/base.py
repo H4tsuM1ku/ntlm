@@ -138,8 +138,8 @@ class MESSAGE(object):
 			offset += 8
 
 		if message.MessageType == NtLmAuthenticate:
-			if message.NtChallengeResponseFields.NameLen > 24:
-				client_challenge = NTLMv2_CLIENT_CHALLENGE.from_bytes(message_bytes[message.NtChallengeResponseFields.NameBufferOffset+24:])
+			if message.NtChallengeResponseFields.Len > 24:
+				client_challenge = NTLMv2_CLIENT_CHALLENGE.from_bytes(message_bytes[message.NtChallengeResponseFields.BufferOffset+24:])
 				av_pairs = client_challenge.AvPairs.av_pairs
 
 				for av_pair in av_pairs:
@@ -155,19 +155,19 @@ class MESSAGE(object):
 class FIELDS(object):
 	"""docstring for Base MESSAGE"""
 	def __init__(self, name=Z(0), offset=NUL):
-		self.NameLen = len(name)
-		self.NameMaxLen = self.NameLen
+		self.Len = len(name)
+		self.MaxLen = self.Len
 
-		self.NameBufferOffset = NUL
+		self.BufferOffset = NUL
 		if len(name):
-			self.NameBufferOffset = offset
+			self.BufferOffset = offset
 
 	def to_bytes(self):
 		bytes_chunks = []
 
-		bytes_chunks.append(struct.pack("<H", self.NameLen))
-		bytes_chunks.append(struct.pack("<H", self.NameMaxLen))
-		bytes_chunks.append(struct.pack("<I", self.NameBufferOffset))
+		bytes_chunks.append(struct.pack("<H", self.Len))
+		bytes_chunks.append(struct.pack("<H", self.MaxLen))
+		bytes_chunks.append(struct.pack("<I", self.BufferOffset))
 
 		return b"".join(bytes_chunks)
 
@@ -175,8 +175,8 @@ class FIELDS(object):
 	def from_bytes(cls, message_bytes):
 		field = cls()
 
-		field.NameLen 			= struct.unpack("<H", message_bytes[:2])[0]
-		field.NameMaxLen 		= struct.unpack("<H", message_bytes[2:4])[0]
-		field.NameBufferOffset 	= struct.unpack("<I", message_bytes[4:])[0]
+		field.Len 			= struct.unpack("<H", message_bytes[:2])[0]
+		field.MaxLen 		= struct.unpack("<H", message_bytes[2:4])[0]
+		field.BufferOffset 	= struct.unpack("<I", message_bytes[4:])[0]
 
 		return field

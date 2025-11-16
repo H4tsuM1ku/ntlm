@@ -35,7 +35,7 @@ def compute_response(flags, infos, ClientChallenge):
 
 		SessionBaseKey = md4(ResponseKeyNT)
 
-	return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey, Z(0))
+	return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey)
 
 def compute_MIC():
 	if flags.dict["NEGOTIATE_KEY_EXCH"] and (flags.dict["NEGOTIATE_ALWAYS_SIGN"] or flags.dict["NEGOTIATE_SIGN"] or flags.dict["NEGOTIATE_SEAL"]):

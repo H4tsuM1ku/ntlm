@@ -1,11 +1,11 @@
 from .base import MESSAGE, FIELDS
 from ntlm.utils import Z
-from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmNegotiate
+from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NtLmNegotiate
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
 
 class NEGOTIATE(MESSAGE):
 	"""docstring for NEGOTIATE"""
-	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
+	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
 		super(NEGOTIATE, self).__init__(NtLmNegotiate)
 
 		encoding = super(NEGOTIATE, self).charset(flags, oem_encoding)

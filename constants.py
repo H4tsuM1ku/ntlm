@@ -1,3 +1,13 @@
+DEFAULT_INFOS = {
+    "domain": "Domain",
+    "workstation": "Computer",
+    "user": "User",
+    "target": "Server",
+    "password": "Password",
+    "server_challenge": b"\x01\x23\x45\x67\x89\xab\xcd\xef",
+    "negotiate_message": b""
+}
+
 NUL = 0x00000000
 
 NtLmNegotiate		= 0x000000001

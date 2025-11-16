@@ -1,12 +1,12 @@
 from .base import MESSAGE, FIELDS
 from ntlm.utils import nonce, Z
-from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmAuthenticate, MsvAvFlags
+from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NtLmAuthenticate, MsvAvFlags
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, RESPONSE, AV_PAIR_LIST
 from ntlm.CRYPTO import rc4k, compute_response, compute_MIC, KXKEY, SIGNKEY, SEALKEY
 
 class AUTHENTICATE(MESSAGE):
 	"""docstring for AUTHENTICATE"""
-	def __init__(self, flags=NEGOTIATE_FLAGS(0x40000201), infos={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
+	def __init__(self, flags=NEGOTIATE_FLAGS(0x40000201), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
 		super(AUTHENTICATE, self).__init__(NtLmAuthenticate)
 
 		encoding = super(AUTHENTICATE, self).charset(flags, oem_encoding)
@@ -17,13 +17,14 @@ class AUTHENTICATE(MESSAGE):
 			KeyExchangeKey = KXKEY(flags, SessionKey, infos["password"], infos["server_challenge"], LmChallengeResponse)
 			
 			if flags.dict["NEGOTIATE_SIGN"] or flags.dict["NEGOTIATE_SEAL"]:
-				ExportedSessionKey = nonce(16)
+				ExportedSessionKey = nonce(128)
 				EncryptedRandomSessionKey = rc4k(KeyExchangeKey, ExportedSessionKey)
 			else:
 				ExportedSessionKey = KeyExchangeKey
 				EncryptedRandomSessionKey = Z(0)
 
 		lm_response, nt_response = RESPONSE(LmChallengeResponse), RESPONSE(NtChallengeResponse)
+		print(EncryptedRandomSessionKey)
 
 		offset = 80
 		self.Version = Z(0)
@@ -51,9 +52,10 @@ class AUTHENTICATE(MESSAGE):
 		self.Payload += infos["workstation"].encode(encoding)
 		self.Payload += EncryptedRandomSessionKey
 
-		for av_pair in infos["target_info"].av_pairs:
-			if av_pair.av_id == MsvAvFlags and av_pair.value & 0x00000002 and flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
-				self.MIC = compute_MIC(infos["negotiate_message"], infos["server_challenge"], self)
+		if "target_info" in infos:
+			for av_pair in infos["target_info"].av_pairs:
+				if av_pair.av_id == MsvAvFlags and av_pair.value & 0x00000002 and flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
+					self.MIC = compute_MIC(infos["negotiate_message"], infos["server_challenge"], self)
 
 		if self.MIC == Z(16):
 			self.MIC = Z(0)
