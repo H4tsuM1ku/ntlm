@@ -1,4 +1,5 @@
 from ntlm.utils import nonce, Z
+from ntlm.constants import MsvAvTimestamp
 from ntlm.STRUCTURES import AV_PAIR_LIST
 import struct
 
@@ -33,19 +34,33 @@ class RESPONSE(object):
 
 class NTLMv2_CLIENT_CHALLENGE(object):
 	"""docstring for NTLMv2_CLIENT_CHALLENGE"""
-	def __init__(self, av_pairs=AV_PAIR_LIST(), time=Z(8), challenge=nonce(64)):
+	def __init__(self, av_list=AV_PAIR_LIST(), challenge=nonce(64)):
 		self.RespType = b"\x01"
 		self.HiRespType = b"\x01"
 		self.Reserved1 = Z(2)
 		self.Reserved2 = Z(4)
-		self.TimeStamp = time
+
+		for av_pair in av_list.av_pairs:
+			if av_pair and av_pair.av_id == MsvAvTimestamp:
+				self.TimeStamp = av_pair.value
+
 		self.ChallengeFromClient = challenge
 		self.Reserved3 = Z(4)
-		self.AvPairs = av_pairs.to_bytes()
+		self.AvPairs = av_list
 
 	def to_bytes(self):
-		values = [getattr(self, attr) for attr in vars(self)]
-		return b"".join(values)
+		bytes_chunks = []
+
+		bytes_chunks.append(self.RespType)
+		bytes_chunks.append(self.HiRespType)
+		bytes_chunks.append(self.Reserved1)
+		bytes_chunks.append(self.Reserved2)
+		bytes_chunks.append(struct.pack("<Q", self.TimeStamp))
+		bytes_chunks.append(self.ChallengeFromClient)
+		bytes_chunks.append(self.Reserved3)
+		bytes_chunks.append(self.AvPairs.to_bytes())
+
+		return b"".join(bytes_chunks)
 
 	@classmethod
 	def from_bytes(cls, message_bytes):

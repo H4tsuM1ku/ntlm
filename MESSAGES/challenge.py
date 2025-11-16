@@ -1,20 +1,24 @@
 from .base import MESSAGE, FIELDS
 from ntlm.utils import nonce, Z
-from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmChallenge, MsvAvEOL
+from ntlm.constants import NUL, NTLMSSP_REVISION_W2K3, NtLmChallenge, \
+							MsvAvNbComputerName, MsvAvNbDomainName,\
+							MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName,\
+							MsvAvFlags, MsvAvTimestamp, MsvAvSingleHost, MsvAvTargetName,\
+							MsvAvChannelBindings
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, AV_PAIR_LIST
 
 class CHALLENGE(MESSAGE):
 	"""docstring for CHALLENGE"""
-	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos={}, av_list={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
+	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos={}, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
 		super(CHALLENGE, self).__init__(NtLmChallenge)
 
 		encoding = super(CHALLENGE, self).charset(flags, oem_encoding)
 
 		target_name = Z(0)
-		if (flags.dict["REQUEST_TARGET"] or flags.dict["TARGET_TYPE_SERVER"] or flags.dict["TARGET_TYPE_DOMAIN"]) and len(infos["target"]):
+		if (flags.dict["REQUEST_TARGET"] or flags.dict["TARGET_TYPE_SERVER"] or flags.dict["TARGET_TYPE_DOMAIN"] or flags.dict["TARGET_TYPE_SHARE"]) and len(infos["target"]):
 			target_name = infos["target"].encode(encoding)
 		
-		target_info = AV_PAIR_LIST(av_list) if flags.dict["NEGOTIATE_TARGET_INFO"] else AV_PAIR_LIST()
+		target_info = AV_PAIR_LIST(infos) if flags.dict["NEGOTIATE_TARGET_INFO"] else AV_PAIR_LIST()
 
 		offset = 48
 		self.Version = Z(0)

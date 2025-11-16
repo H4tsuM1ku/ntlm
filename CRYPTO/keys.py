@@ -1,9 +1,12 @@
 from .utils import des, md5, md4, hmac_md5
+from ntlm.CRYPTO import LMOWFv1
 from ntlm.utils import Z
 from ntlm.constants import NTLMSSP_REVISION_W2K3
 
-def KXKEY(flags, SessionBaseKey, ResponseKeyLM, ServerChallenge, LmChallengeResponse):
+def KXKEY(flags, SessionBaseKey, password, ServerChallenge, LmChallengeResponse):
 	key_exchange_key = SessionBaseKey
+
+	ResponseKeyLM = LMOWFv1(password)
 
 	if flags.dict["NEGOTIATE_NTLM"]:
 		if flags.dict["NEGOTIATE_LM_KEY"]:

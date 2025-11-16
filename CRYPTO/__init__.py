@@ -27,5 +27,8 @@ def __getattr__(name):
 		case "compute_response":
 			from .compute import compute_response
 			return compute_response
+		case "compute_MIC":
+			from .compute import compute_MIC
+			return compute_MIC
 
 	raise AttributeError(f"module {__name__} has no attribute {name}")

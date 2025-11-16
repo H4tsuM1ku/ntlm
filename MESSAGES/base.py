@@ -71,36 +71,38 @@ class MESSAGE(object):
 				print(value)
 
 	def to_bytes(self):
-		message_type = self.MessageType
-		negotiate_flags = self.NegotiateFlags
+		bytes_chunks = []
 
-		self.Signature = struct.pack("8s", self.Signature)
-		self.MessageType = struct.pack("<I", self.MessageType)
+		bytes_chunks.append(struct.pack("8s", self.Signature))
+		bytes_chunks.append(struct.pack("<I", self.MessageType))
 
-		if message_type == NtLmNegotiate:
-			self.NegotiateFlags		= self.NegotiateFlags.to_bytes()
-			self.DomainNameFields	= self.DomainNameFields.to_bytes()
-			self.WorkstationFields	= self.WorkstationFields.to_bytes()
-		elif message_type == NtLmChallenge:
-			self.TargetNameFields	= self.TargetNameFields.to_bytes()
-			self.NegotiateFlags		= self.NegotiateFlags.to_bytes()
-			self.TargetInfoFields	= self.TargetInfoFields.to_bytes()
-		elif message_type == NtLmAuthenticate:
-			self.LmChallengeResponseFields			= self.LmChallengeResponseFields.to_bytes()
-			self.NtChallengeResponseFields			= self.NtChallengeResponseFields.to_bytes()
-			self.DomainNameFields					= self.DomainNameFields.to_bytes()
-			self.UserNameFields						= self.UserNameFields.to_bytes()
-			self.WorkstationFields					= self.WorkstationFields.to_bytes()
-			self.EncryptedRandomSessionKeyFields	= self.EncryptedRandomSessionKeyFields.to_bytes()
-			self.NegotiateFlags						= self.NegotiateFlags.to_bytes()
+		if self.MessageType == NtLmNegotiate:
+			bytes_chunks.append(self.NegotiateFlags.to_bytes())
+			bytes_chunks.append(self.DomainNameFields.to_bytes())
+			bytes_chunks.append(self.WorkstationFields.to_bytes())
+		elif self.MessageType == NtLmChallenge:
+			bytes_chunks.append(self.TargetNameFields.to_bytes())
+			bytes_chunks.append(self.NegotiateFlags.to_bytes())
+			bytes_chunks.append(self.ServerChallenge)
+			bytes_chunks.append(self.Reserved)
+			bytes_chunks.append(self.TargetInfoFields.to_bytes())
+		elif self.MessageType == NtLmAuthenticate:
+			bytes_chunks.append(self.LmChallengeResponseFields.to_bytes())
+			bytes_chunks.append(self.NtChallengeResponseFields.to_bytes())
+			bytes_chunks.append(self.DomainNameFields.to_bytes())
+			bytes_chunks.append(self.UserNameFields.to_bytes())
+			bytes_chunks.append(self.WorkstationFields.to_bytes())
+			bytes_chunks.append(self.EncryptedRandomSessionKeyFields.to_bytes())
+			bytes_chunks.append(self.NegotiateFlags.to_bytes())
 
-		if negotiate_flags & NEGOTIATE_FLAGS.NEGOTIATE_VERSION:
-			self.Version = self.Version.to_bytes()
+		if self.NegotiateFlags & NEGOTIATE_FLAGS.NEGOTIATE_VERSION:
+			bytes_chunks.append(self.Version.to_bytes())
 
-		self.Payload = struct.pack(f"{len(self.Payload)}s", self.Payload)
+		if self.MessageType == NtLmAuthenticate:
+			bytes_chunks.append(self.MIC)
 
-		values = [getattr(self, attr) for attr in vars(self)]
-		return b"".join(values)
+		bytes_chunks.append(struct.pack(f"{len(self.Payload)}s", self.Payload))
+		return b"".join(bytes_chunks)
 
 	@classmethod
 	def from_bytes(cls, message_bytes):
@@ -161,12 +163,13 @@ class FIELDS(object):
 			self.NameBufferOffset = offset
 
 	def to_bytes(self):
-		self.NameLen 			= struct.pack("<H", self.NameLen)
-		self.NameMaxLen 		= struct.pack("<H", self.NameMaxLen)
-		self.NameBufferOffset 	= struct.pack("<I", self.NameBufferOffset)
+		bytes_chunks = []
 
-		values = [getattr(self, attr) for attr in vars(self)]
-		return b"".join(values)
+		bytes_chunks.append(struct.pack("<H", self.NameLen))
+		bytes_chunks.append(struct.pack("<H", self.NameMaxLen))
+		bytes_chunks.append(struct.pack("<I", self.NameBufferOffset))
+
+		return b"".join(bytes_chunks)
 
 	@classmethod
 	def from_bytes(cls, message_bytes):

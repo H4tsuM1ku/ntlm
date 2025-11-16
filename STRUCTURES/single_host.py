@@ -3,20 +3,24 @@ from ntlm.utils import Z, nonce
 import struct
 
 class SINGLE_HOST(object):
-	def __init__(self):
+	def __init__(self, custom_data=Z(8)):
 		self.Size = 48
 		self.Z4 = Z(4)
-		self.CustomData = Z(8)
+		self.CustomData = custom_data
 		self.MachineID = nonce(256)
 
 	def __len__(self):
 		return struct.unpack("<I", self.Size)[0]
 
 	def to_bytes(self):
-		self.Size = struct.pack("<I", self.Size)
+		bytes_chunks = []
 
-		values = [getattr(self, attr) for attr in vars(self)]
-		return b"".join(values)
+		bytes_chunks.append(struct.unpack("<I", self.Size))
+		bytes_chunks.append(self.Z4)
+		bytes_chunks.append(self.CustomData)
+		bytes_chunks.append(self.MachineID)
+		
+		return b"".join(bytes_chunks)
 
 	@classmethod
 	def from_bytes(cls, message_bytes):

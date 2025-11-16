@@ -40,16 +40,15 @@ class VERSION(object):
 		self.NTLMRevisionCurrent = revision
 
 	def to_bytes(self):
-		self.ProductMajorVersion 	= struct.pack("B", self.ProductMajorVersion)
-		self.ProductMinorVersion	= struct.pack("B", self.ProductMinorVersion)
-		self.ProductBuild 			= struct.pack("<H", self.ProductBuild)
-		self.Reserved				= struct.pack("3B", (self.Reserved >> 16) & 0xff,
-										(self.Reserved >> 8) & 0xff,
-										self.Reserved & 0xff)
-		self.NTLMRevisionCurrent 	= struct.pack("B", self.NTLMRevisionCurrent)
+		bytes_chunks = []
 
-		values = [getattr(self, attr) for attr in vars(self)]
-		return b"".join(values)
+		bytes_chunks.append(struct.pack("B", self.ProductMajorVersion))
+		bytes_chunks.append(struct.pack("B", self.ProductMinorVersion))
+		bytes_chunks.append(struct.pack("<H", self.ProductBuild))
+		bytes_chunks.append(self.Reserved)
+		bytes_chunks.append(struct.pack("B", self.NTLMRevisionCurrent))
+
+		return b"".join(bytes_chunks)
 
 	@classmethod
 	def from_bytes(cls, message_bytes):
