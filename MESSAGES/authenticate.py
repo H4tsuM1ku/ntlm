@@ -13,7 +13,7 @@ class AUTHENTICATE(MESSAGE):
 		client_challenge = nonce(64)
 
 		if flags.dict["NEGOTIATE_KEY_EXCH"]:
-			LmChallengeResponse, NtChallengeResponse, SessionKey, temp = compute_response(flags, infos, client_challenge)
+			LmChallengeResponse, NtChallengeResponse, SessionKey = compute_response(flags, infos, client_challenge)
 			KeyExchangeKey = KXKEY(flags, SessionKey, infos["password"], infos["server_challenge"], LmChallengeResponse)
 			
 			if flags.dict["NEGOTIATE_SIGN"] or flags.dict["NEGOTIATE_SEAL"]:
@@ -23,10 +23,7 @@ class AUTHENTICATE(MESSAGE):
 				ExportedSessionKey = KeyExchangeKey
 				EncryptedRandomSessionKey = Z(0)
 
-		if flags.dict["NEGOTIATE_NTLM"] and flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and flags.dict["NEGOTIATE_TARGET_INFO"]:
-			lm_response, nt_response = RESPONSE(LmChallengeResponse, 2, temp), RESPONSE(NtChallengeResponse, 2, temp)
-		else:
-			lm_response, nt_response = RESPONSE(LmChallengeResponse), RESPONSE(NtChallengeResponse)
+		lm_response, nt_response = RESPONSE(LmChallengeResponse), RESPONSE(NtChallengeResponse)
 
 		offset = 80
 		self.Version = Z(0)
@@ -55,7 +52,6 @@ class AUTHENTICATE(MESSAGE):
 		self.Payload += EncryptedRandomSessionKey
 
 		for av_pair in infos["target_info"].av_pairs:
-			print("a", av_pair, av_pair.av_id)
 			if av_pair.av_id == MsvAvFlags and av_pair.value & 0x00000002 and flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
 				self.MIC = compute_MIC(infos["negotiate_message"], infos["server_challenge"], self)
 

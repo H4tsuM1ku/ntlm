@@ -4,11 +4,8 @@ from ntlm.STRUCTURES import AV_PAIR_LIST
 import struct
 
 class RESPONSE(object):
-	def __init__(self, response=Z(24), version=1, challenge=nonce(64)):
+	def __init__(self, response=Z(24)):
 		self.Response = response
-
-		if version == 2:
-			self.ChallengeFromClient = challenge
 
 	def __len__(self):
 		values = [getattr(self, attr) for attr in vars(self)]

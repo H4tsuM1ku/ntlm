@@ -15,11 +15,11 @@ def compute_response(flags, infos, ClientChallenge):
 		NTProofStr = hmac_md5(ResponseKeyNT, infos["server_challenge"] + temp)
 
 		NtChallengeResponse = NTProofStr + temp
-		LmChallengeResponse = hmac_md5(ResponseKeyNT, infos["server_challenge"] + ClientChallenge) + ClientChallenge
+		LmChallengeResponse = hmac_md5(ResponseKeyLM, infos["server_challenge"] + ClientChallenge) + ClientChallenge
 
 		SessionBaseKey = hmac_md5(ResponseKeyNT, NTProofStr)
 
-		return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey, temp)
+		return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey)
 	else:
 		if flags.dict["NEGOTIATE_NTLM"]:
 			ResponseKeyNT, ResponseKeyLM = NTOWFv1(infos["password"]), LMOWFv1(infos["password"])
@@ -34,7 +34,6 @@ def compute_response(flags, infos, ClientChallenge):
 					LmChallengeResponse = NtChallengeResponse
 
 		SessionBaseKey = md4(ResponseKeyNT)
-
 
 	return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey, Z(0))
 
