@@ -5,9 +5,17 @@ import struct
 
 class NEGOTIATE_FLAGS(IntFlag):
 	"""
-	NTLM NEGOTIATE FLAGS structure.
+	Represents the set of NTLM Negotiate Flags, as defined in the
+	NTLMSSP (NT LAN Manager Security Support Provider) specification.
 
-	This class represents the NTLMSSP NEGOTIATE_FLAGS field, where each bit corresponds to a specific negotiation capability.
+	These flags describe the capabilities and security requirements
+	negotiated between the client and server during the NTLM handshake.
+	Each flag corresponds to a specific NTLMSSP constant and may influence
+	message structure, encoding, cryptographic behavior, and features such as
+	signing, sealing, key exchange, and target information.
+
+	This class extends `IntFlag`, allowing bitwise combinations of flags
+	while maintaining readable attribute access.
 
 	Fields
 	-------
@@ -149,6 +157,26 @@ class NEGOTIATE_FLAGS(IntFlag):
 		- A == 1 → Unicode
 		- A == 0 and B == 1 → OEM
 		- A == 0 and B == 0 → SEC_E_INVALID_TOKEN
+
+	Methods
+	-------
+	dict :
+		Cached property returning a dictionary mapping flag names to
+		boolean (0 or 1) indicating whether each flag is set.
+	clear():
+		Returns an empty `NEGOTIATE_FLAGS` instance with all bits cleared.
+	to_bytes():
+		Serializes the flags into a 4-byte little-endian integer.
+	from_bytes(message_bytes):
+		Reconstructs a `NEGOTIATE_FLAGS` instance from a 4-byte integer.
+
+	Notes
+	-----
+	- Flags directly impact how NTLM messages are built, encoded, and
+	  encrypted throughout the NEGOTIATE → CHALLENGE → AUTHENTICATE sequence.
+	- Bitwise operations (`|`, `&`, `~`) can be used to combine or test flags.
+	- The `dict` property is frequently used to drive conditional logic
+	  throughout the NTLM implementation.
 	"""
 
 	NEGOTIATE_56						= NTLMSSP_NEGOTIATE_56

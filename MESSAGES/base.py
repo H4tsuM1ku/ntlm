@@ -4,7 +4,64 @@ from ntlm.STRUCTURES import NEGOTIATE_FLAGS, NTLMv2_CLIENT_CHALLENGE, VERSION
 import struct
 
 class MESSAGE(object):
-	"""docstring for Base MESSAGE"""
+	"""
+	Represents an NTLM message structure capable of serializing and
+	deserializing NTLM NEGOTIATE, CHALLENGE, and AUTHENTICATE messages.
+
+	This class handles:
+	  - Common NTLM header fields (`Signature`, `MessageType`)
+	  - Message-specific field structures (e.g., domain/workstation fields,
+		response fields, target info, negotiate flags)
+	  - Optional fields such as the NTLM version and MIC
+	  - The raw payload stored after the fixed header region
+
+	The internal layout and encoding follow the Microsoft NTLM protocol
+	specification, with different fields depending on the message type.
+
+	Parameters
+	----------
+	message_type : int, optional
+		The NTLM message type (`NtLmNegotiate`, `NtLmChallenge`,
+		`NtLmAuthenticate`). Determines which fields are initialized.
+		Defaults to `NUL`.
+
+	Attributes
+	----------
+	Signature : bytes
+		The fixed NTLM signature: b'NTLMSSP\0'.
+	MessageType : int
+		Message type identifier.
+	Payload : bytes
+		Additional raw data appended after the structured header.
+
+	Methods
+	-------
+	charset(flags, oem_encoding):
+		Determines the character encoding (Unicode or OEM) based on the
+		negotiate flags.
+
+	display_info(obj=None, indent=0):
+		Recursively prints a structured, human-readable representation of
+		the message fields and their values.
+
+	to_bytes():
+		Serializes the message to its binary form, assembling all required
+		fields in the correct order as defined by the NTLM protocol.
+
+	from_bytes(message_bytes):
+		Class method that parses a binary NTLM message and reconstructs
+		a fully populated `MESSAGE` instance, including optional fields
+		such as Version and MIC when present.
+
+	Notes
+	-----
+	- The field layout depends heavily on the message type and on negotiated
+	  flags such as `NEGOTIATE_VERSION` and `NEGOTIATE_EXTENDED_SESSIONSECURITY`.
+	- This class relies on helper structures such as `FIELDS`,
+	  `NEGOTIATE_FLAGS`, and `VERSION` to parse or serialize each section.
+	- MIC extraction for NTLMv2 is performed conditionally based on the
+	  values of the AV pairs and security flags.
+	"""
 	def __init__(self, message_type=NUL):
 		self.Signature = b'NTLMSSP\0'
 		self.MessageType = message_type
@@ -153,7 +210,40 @@ class MESSAGE(object):
 		return message
 
 class FIELDS(object):
-	"""docstring for Base MESSAGE"""
+	"""
+	Represents a serializable field descriptor containing length and offset
+	metadata, intended to be converted to and from a binary format.
+
+	This class models a simple header composed of three values:
+	- `Len`: the current length of the field (in bytes)
+	- `MaxLen`: the maximum allowed length
+	- `BufferOffset`: the position in an external buffer where the actual data
+	  is stored
+
+	Parameters
+	----------
+	name : sequence, optional
+		Value used to determine the field's length. Its length initializes
+		`Len` and `MaxLen`. Defaults to `Z(0)`.
+	offset : int, optional
+		Offset that initializes `BufferOffset`. Defaults to `NUL`.
+
+	Methods
+	-------
+	to_bytes():
+		Serializes the instance to binary format using the structure:
+			<H Len> <H MaxLen> <I BufferOffset>
+		and returns a `bytes` object.
+
+	from_bytes(message_bytes):
+		Class method that reconstructs an instance from a binary block following
+		the same serialization structure.
+
+	Notes
+	-----
+	This class does not store the actual data, but only metadata pointing to
+	where the field is stored in an external buffer.
+	"""
 	def __init__(self, name=Z(0), offset=NUL):
 		self.Len = len(name)
 		self.MaxLen = self.Len

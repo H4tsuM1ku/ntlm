@@ -3,6 +3,48 @@ from ntlm.utils import Z, nonce
 import struct
 
 class SINGLE_HOST(object):
+	"""
+	Represents a single host structure containing machine-specific data.
+
+	This class models a fixed-size header with a custom data field and a
+	unique machine identifier. It can serialize to and from a binary
+	representation.
+
+	Parameters
+	----------
+	custom_data : bytes, optional
+		Optional custom data associated with the host. Defaults to
+		`Z(8)` (8 zero bytes).
+
+	Attributes
+	----------
+	Size : int
+		Size of the structure in bytes. Defaults to 48.
+	Z4 : bytes
+		Four reserved zero bytes.
+	CustomData : bytes
+		Custom data associated with the host.
+	MachineID : bytes
+		Unique 256-bit identifier for the machine (nonce).
+
+	Methods
+	-------
+	__len__():
+		Returns the total size of the structure in bytes.
+	to_bytes():
+		Serializes the structure into a contiguous byte string.
+	from_bytes(message_bytes):
+		Class method that parses a binary representation and returns
+		a `SINGLE_HOST` instance.
+
+	Notes
+	-----
+	- The structure layout is:
+		<Size (4 bytes)> <Z4 (4 bytes)> <CustomData (8 bytes)> <MachineID (256 bits)>
+	- `MachineID` is generated as a random nonce by default.
+	- Reserved fields (`Z4`) and default custom data (`Z(8)`) are typically
+	  zero-filled and may be ignored depending on context.
+	"""
 	def __init__(self, custom_data=Z(8)):
 		self.Size = 48
 		self.Z4 = Z(4)

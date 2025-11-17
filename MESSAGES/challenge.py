@@ -8,7 +8,62 @@ from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NtLmChalle
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, AV_PAIR_LIST
 
 class CHALLENGE(MESSAGE):
-	"""docstring for CHALLENGE"""
+	"""
+	Represents an NTLM CHALLENGE message (Type 2), sent by the server
+	after receiving a NEGOTIATE message from the client.
+
+	This message communicates the server challenge, target information,
+	and the server’s supported security features. It may also include
+	a target name and NTLM version structure depending on the negotiate flags.
+
+	Parameters
+	----------
+	flags : NEGOTIATE_FLAGS, optional
+		The negotiate flags chosen by the server for this authentication
+		exchange. These determine whether fields such as target name,
+		target info, and version information will be included.
+		Defaults to `NEGOTIATE_FLAGS(1)`.
+	infos : dict, optional
+		Dictionary containing optional `"target"` metadata used to build
+		the AV pair list and target name fields. Defaults to `DEFAULT_INFOS`.
+	version_infos : tuple, optional
+		Tuple containing (major_version, minor_version, build_number) used
+		when the `NEGOTIATE_VERSION` flag is set. Defaults to `(NUL, NUL, NUL)`.
+	oem_encoding : str, optional
+		Encoding used for OEM-encoded fields when Unicode is not negotiated.
+		Defaults to `"cp850"`.
+
+	Attributes
+	----------
+	NegotiateFlags : NEGOTIATE_FLAGS
+		Security and capability flags selected by the server.
+	ServerChallenge : bytes
+		An 8-byte random challenge used in NTLM authentication.
+	Reserved : bytes
+		Eight reserved bytes required by the NTLM specification.
+	TargetNameFields : FIELDS
+		Descriptor for the server target name (domain, computer, or share),
+		if supplied.
+	TargetInfoFields : FIELDS
+		Descriptor for the AV pair list containing additional server metadata.
+	Version : VERSION or bytes
+		NTLM version block if negotiated, otherwise zero-filled bytes.
+	Payload : bytes
+		Payload containing the target name and target information structures.
+
+	Notes
+	-----
+	- The target name is included only when certain flags are set, such as
+	  `REQUEST_TARGET`, `TARGET_TYPE_SERVER`, `TARGET_TYPE_DOMAIN`,
+	  or `TARGET_TYPE_SHARE`.
+	- The AV pair list (`TargetInfoFields`) is included only when the
+	  `NEGOTIATE_TARGET_INFO` flag is set.
+	- NTLM version information is appended only when `NEGOTIATE_VERSION`
+	  is set.
+	- Field offsets are computed dynamically based on the optional data
+	  included in the message.
+	- The server challenge is generated using a 64-bit nonce.
+	"""
 	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
 		super(CHALLENGE, self).__init__(NtLmChallenge)
 

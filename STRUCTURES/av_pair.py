@@ -8,6 +8,60 @@ from datetime import datetime, timezone
 import struct
 
 class AV_PAIR_LIST(object):
+	"""
+	Represents a list of NTLM AV (Attribute–Value) pairs used in the
+	NTLMv2 Client Challenge and target information structures.
+
+	AV pairs convey optional metadata such as workstation name, domain
+	name, DNS names, flags, timestamps, and other context-specific data.
+
+	Parameters
+	----------
+	infos : dict, optional
+		Dictionary of information used to populate common AV pairs. Possible
+		keys include:
+		- "workstation": NetBIOS name of the client workstation
+		- "domain": NetBIOS or DNS domain name
+		- "custom_data": Optional custom field (e.g., SINGLE_HOST)
+		- "target": Optional target server name
+		Defaults to empty dictionary, which creates an empty AV pair list.
+
+	Attributes
+	----------
+	av_pairs : list of AV_PAIR
+		List of AV_PAIR instances representing each attribute–value entry.
+
+	Methods
+	-------
+	__len__():
+		Returns the total number of bytes when the AV pair list is serialized.
+	add(av_pair):
+		Appends a new `AV_PAIR` instance to the list.
+	to_bytes():
+		Serializes the AV pair list into a contiguous byte string.
+	from_bytes(message_bytes):
+		Class method that parses a raw byte string and reconstructs an
+		`AV_PAIR_LIST` instance, extracting individual `AV_PAIR` objects.
+
+	Notes
+	-----
+	- An AV pair list always ends with an "End-of-List" (`MsvAvEOL`) entry,
+	  which is automatically added during initialization.
+	- Common AV pairs include:
+		- `MsvAvNbComputerName`
+		- `MsvAvNbDomainName`
+		- `MsvAvDnsComputerName`
+		- `MsvAvDnsDomainName`
+		- `MsvAvDnsTreeName`
+		- `MsvAvFlags`
+		- `MsvAvTimestamp`
+		- `MsvAvSingleHost`
+		- `MsvAvTargetName`
+	- The `infos` dictionary values are encoded appropriately when constructing
+	  the AV pairs.
+	- The `to_bytes` method concatenates all AV_PAIR serializations into a
+	  single byte string suitable for inclusion in NTLM messages.
+	"""
 	def __init__(self, infos={}):
 		self.av_pairs = []
 		EOL = False
@@ -69,6 +123,57 @@ class AV_PAIR_LIST(object):
 
 
 class AV_PAIR(object):
+	"""
+	Represents a single NTLM Attribute–Value (AV) pair used in NTLMv2
+	Client Challenge and target information structures.
+
+	Each AV_PAIR encodes an attribute type (`av_id`), its length
+	(`av_len`), and the corresponding value. AV pairs are the building
+	blocks of the `AV_PAIR_LIST` used in NTLMv2 authentication.
+
+	Parameters
+	----------
+	None
+		Instances are initialized with `av_id` set to `MsvAvEOL` (End-of-List)
+		and an empty value.
+
+	Attributes
+	----------
+	av_id : int
+		Identifier of the AV pair, e.g., `MsvAvNbComputerName`, `MsvAvFlags`,
+		`MsvAvTimestamp`, etc.
+	av_len : int
+		Length of the value in bytes.
+	value : bytes or SINGLE_HOST
+		Value associated with the AV pair. Can be UTF-16LE encoded bytes,
+		integers, or a `SINGLE_HOST` object depending on `av_id`.
+
+	Methods
+	-------
+	set_av_pair(av_id, value):
+		Initializes the AV pair with a given identifier and value. Returns
+		`self` or `None` if the value is empty.
+	to_bytes():
+		Serializes the AV pair into a binary structure suitable for inclusion
+		in NTLMv2 messages:
+			<av_id (2 bytes)> <av_len (2 bytes)> <value (variable length)>
+	from_bytes(message_bytes):
+		Class method that parses a binary AV pair from raw bytes and returns
+		a tuple `(AV_PAIR instance, remaining_bytes)`.
+
+	Notes
+	-----
+	- AV pair types determine the serialization format:
+		- Strings (computer/domain/DNS names) are UTF-16LE encoded.
+		- Flags are 4-byte integers.
+		- Timestamps are 8-byte integers.
+		- SINGLE_HOST is serialized using its `to_bytes()` method.
+		- Channel bindings are currently not implemented.
+	- `MsvAvEOL` marks the end of an AV pair list and typically has
+	  zero-length value.
+	- The `from_bytes` method correctly slices the input to allow sequential
+	  parsing of multiple AV pairs in a list.
+	"""
 	def __init__(self):
 		self.av_id = MsvAvEOL
 		self.av_len = NUL

@@ -5,7 +5,73 @@ from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, RESPONSE, AV_PAIR_LIST
 from ntlm.CRYPTO import rc4k, compute_response, compute_MIC, KXKEY, SIGNKEY, SEALKEY
 
 class AUTHENTICATE(MESSAGE):
-	"""docstring for AUTHENTICATE"""
+	"""
+	Represents an NTLM AUTHENTICATE message (Type 3), the final message
+	sent by the client during the NTLM authentication handshake.
+
+	This message contains the client's authentication material, including
+	LM/NT challenge responses, user and domain names, workstation name,
+	and optionally an encrypted session key and MIC value depending on
+	the negotiated security features.
+
+	Parameters
+	----------
+	flags : NEGOTIATE_FLAGS, optional
+		The negotiate flags negotiated during the NTLM handshake.
+		These flags determine which cryptographic operations are performed
+		and which fields are included in the message.
+		Defaults to `NEGOTIATE_FLAGS(0x40000201)`.
+	infos : dict, optional
+		A dictionary of user, domain, workstation, and server details
+		required for response computation. Expected keys include:
+		`"user"`, `"domain"`, `"workstation"`, `"password"`,
+		`"server_challenge"`, `"negotiate_message"`, and optionally
+		`"target_info"`. Defaults to `DEFAULT_INFOS`.
+	version_infos : tuple, optional
+		Tuple containing (major_version, minor_version, build_number).
+		Used only when the `NEGOTIATE_VERSION` flag is set.
+		Defaults to `(NUL, NUL, NUL)`.
+	oem_encoding : str, optional
+		OEM codepage used when Unicode is not negotiated.
+		Defaults to `"cp850"`.
+
+	Attributes
+	----------
+	LmChallengeResponseFields : FIELDS
+		Descriptor for the LM challenge response structure.
+	NtChallengeResponseFields : FIELDS
+		Descriptor for the NT challenge response (often NTLMv2).
+	DomainNameFields : FIELDS
+		Descriptor for the domain name.
+	UserNameFields : FIELDS
+		Descriptor for the username.
+	WorkstationFields : FIELDS
+		Descriptor for the workstation name.
+	EncryptedRandomSessionKeyFields : FIELDS
+		Descriptor for the encrypted session key, included only when
+		key exchange and signing/sealing are negotiated.
+	Version : VERSION or bytes
+		NTLM version structure when negotiated; zero-filled otherwise.
+	MIC : bytes
+		The Message Integrity Code computed in NTLMv2 when required by
+		negotiate flags and AV pair flags.
+	Payload : bytes
+		Concatenation of all variable-length data (responses, names,
+		session key) appended after the header.
+
+	Notes
+	-----
+	- LM and NT responses are computed using `compute_response`, which
+	  includes support for NTLMv2 client challenge structures.
+	- If `NEGOTIATE_KEY_EXCH` and signing or sealing are enabled, the final
+	  session key is encrypted using RC4 and included in the message.
+	- MIC computation is performed only when the AV pair `"MsvAvFlags"` and
+	  `NEGOTIATE_EXTENDED_SESSIONSECURITY` both indicate that it is required.
+	- Offsets for each variable-length structure follow the NTLM specification
+	  and depend on which optional fields (e.g., version) are present.
+	- If the MIC remains uninitialized (all zeros), it is replaced with a
+	  zero-length block (`Z(0)`), matching expected NTLM behavior.
+	"""
 	def __init__(self, flags=NEGOTIATE_FLAGS(0x40000201), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
 		super(AUTHENTICATE, self).__init__(NtLmAuthenticate)
 

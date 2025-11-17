@@ -4,6 +4,45 @@ from ntlm.STRUCTURES import AV_PAIR_LIST
 import struct
 
 class RESPONSE(object):
+	"""
+	Represents an NTLM response structure such as LM, NT, or NTLMv2 responses.
+
+	This class encapsulates the variable-length authentication response data
+	that appears in NTLM AUTHENTICATE messages. A response typically consists of
+	a fixed-size portion (e.g., LM/NT hash or NTLMv2 HMAC) followed by optional
+	additional data such as the NTLMv2 client challenge structure.
+
+	Parameters
+	----------
+	response : bytes, optional
+		Initial response value. Defaults to 24 zero bytes (`Z(24)`), which
+		matches the size of an LM/NT challenge response in legacy NTLM.
+
+	Attributes
+	----------
+	Response : bytes
+		The main response block (usually 24 bytes).
+	ChallengeFromClient : bytes, optional
+		Additional data appended after the initial response (e.g., NTLMv2
+		client challenge fields), populated by `from_bytes()`.
+
+	Methods
+	-------
+	__len__():
+		Returns the total number of bytes contained in the response object.
+	to_bytes():
+		Serializes the response fields into a contiguous byte string.
+	from_bytes(message_bytes):
+		Class method that parses a raw response from bytes, separating the
+		fixed 24-byte portion from any remaining client challenge data.
+
+	Notes
+	-----
+	- This class does not interpret the internal structure of NTLMv2
+	  client challenge data; it simply stores and concatenates it.
+	- The length of the initial `Response` field (24 bytes) follows the
+	  NTLM specification for LM and NT responses.
+	"""
 	def __init__(self, response=Z(24)):
 		self.Response = response
 
@@ -30,7 +69,62 @@ class RESPONSE(object):
 		return response
 
 class NTLMv2_CLIENT_CHALLENGE(object):
-	"""docstring for NTLMv2_CLIENT_CHALLENGE"""
+	"""
+	Represents an NTLMv2 Client Challenge structure (a component of the
+	NTLMv2 authentication response).
+
+	This structure appears inside the NT challenge response of an NTLMv2
+	AUTHENTICATE message and contains metadata used in the NTLMv2 proof-of-
+	possession calculation, including the timestamp, an 8-byte client
+	challenge, and a list of AV pairs (attribute–value pairs).
+
+	Parameters
+	----------
+	av_list : AV_PAIR_LIST, optional
+		The list of AV pairs to embed inside the challenge structure.
+		Defaults to an empty `AV_PAIR_LIST()`.
+	challenge : bytes, optional
+		The 8-byte client challenge (nonce). Defaults to `nonce(64)`,
+		which produces a 64-bit random value.
+
+	Attributes
+	----------
+	RespType : bytes
+		The response type, always set to ``b"\\x01"``.
+	HiRespType : bytes
+		The high-order response type, also ``b"\\x01"``.
+	Reserved1 : bytes
+		Two reserved bytes (zero).
+	Reserved2 : bytes
+		Four reserved bytes (zero).
+	TimeStamp : int
+		The 64-bit Windows FILETIME timestamp extracted from the AV pair list,
+		if present.
+	ChallengeFromClient : bytes
+		The 8-byte client nonce used in NTLMv2 authentication.
+	Reserved3 : bytes
+		Four reserved bytes (zero).
+	AvPairs : AV_PAIR_LIST
+		The attribute–value pair list encoding metadata such as domain,
+		workstation, timestamps, flags, etc.
+
+	Methods
+	-------
+	to_bytes():
+		Serializes the NTLMv2 client challenge structure into its binary
+		representation following the NTLMv2 specification.
+	from_bytes(message_bytes):
+		Parses raw bytes into a new `NTLMv2_CLIENT_CHALLENGE` instance.
+
+	Notes
+	-----
+	- The timestamp (`TimeStamp`) is extracted dynamically from the AV pair
+	  list, specifically from the `MsvAvTimestamp` AV pair if present.
+	- The order and layout of fields strictly follow Microsoft's NTLMv2
+	  specification.
+	- This class does not compute the HMAC or proof string; it only models
+	  the internal client challenge block used in the NTLMv2 response.
+	"""
 	def __init__(self, av_list=AV_PAIR_LIST(), challenge=nonce(64)):
 		self.RespType = b"\x01"
 		self.HiRespType = b"\x01"
