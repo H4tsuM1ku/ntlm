@@ -1,6 +1,7 @@
+import struct
+
 from ntlm.utils import Z
 from ntlm.constants import NUL
-import struct
 
 class VERSION(object):
 	"""

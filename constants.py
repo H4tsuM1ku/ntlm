@@ -1,18 +1,20 @@
 DEFAULT_INFOS = {
-    "domain": "Domain",
-    "workstation": "Computer",
-    "user": "User",
-    "target": "Server",
-    "password": "Password",
-    "server_challenge": b"\x01\x23\x45\x67\x89\xab\xcd\xef",
-    "negotiate_message": b""
+	"domain": "Domain",
+	"workstation": "Computer",
+	"user": "User",
+	"password": "Password",
+	"target": "Server",
+	"server_challenge": b"\x01\x23\x45\x67\x89\xab\xcd\xef",
+	"negotiate_message": b"",
+	"target_info": b"",
+	"custom_data": b""
 }
 
 NUL = 0x00000000
 
-NtLmNegotiate		= 0x000000001
-NtLmChallenge		= 0x000000002
-NtLmAuthenticate	= 0x000000003
+NTLM_NEGOTIATE		= 0x000000001
+NTLM_CHALLENGE		= 0x000000002
+NTLM_AUTHENTICATE	= 0x000000003
 
 NTLMSSP_NEGOTIATE_56 						= 0x80000000
 NTLMSSP_NEGOTIATE_KEY_EXCH 					= 0x40000000
@@ -40,17 +42,17 @@ NTLMSSP_NEGOTIATE_UNICODE					= 0x00000001
 
 NTLMSSP_REVISION_W2K3 = 0x0F
 
-MsvAvEOL				= 0x0000
-MsvAvNbComputerName		= 0x0001
-MsvAvNbDomainName 		= 0x0002
-MsvAvDnsComputerName 	= 0x0003
-MsvAvDnsDomainName 		= 0x0004
-MsvAvDnsTreeName 		= 0x0005
-MsvAvFlags 				= 0x0006
-MsvAvTimestamp 			= 0x0007
-MsvAvSingleHost 		= 0x0008
-MsvAvTargetName 		= 0x0009
-MsvAvChannelBindings	= 0x000A
+MSV_AV_NB_COMPUTER_NAME		= 0x0001
+MSV_AV_NB_DOMAIN_NAME		= 0x0002
+MSV_AV_DNS_COMPUTER_NAME	= 0x0003
+MSV_AV_DNS_DOMAIN_NAME		= 0x0004
+MSV_AV_DNS_TREE_NAME		= 0x0005
+MSV_AV_FLAGS				= 0x0006
+MSV_AV_TIMESTAMP			= 0x0007
+MSV_AV_SINGLE_HOST			= 0x0008
+MSV_AV_TARGET_NAME			= 0x0009
+MSV_AV_CHANNEL_BINDINGS		= 0x000A
+MSV_AV_EOL					= 0x0000
 
 WINDOWS_MAJOR_VERSION_5 = 0x05
 WINDOWS_MAJOR_VERSION_6	= 0x06

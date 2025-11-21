@@ -1,43 +1,44 @@
-from .utils import md4, md5, hmac_md5, desl, rc4k
 from ntlm.utils import Z
 from ntlm.CRYPTO import LMOWFv1, NTOWFv1, LMOWFv2, NTOWFv2
 from ntlm.STRUCTURES import NTLMv2_CLIENT_CHALLENGE
 
-def compute_response(flags, infos, ClientChallenge):
+from .utils import md4, md5, hmac_md5, desl, rc4k
+
+def compute_response(flags, username, password, domain_name, target_info, server_challenge, client_challenge):
 	if flags.dict["ANONYMOUS"]:
 		NtChallengeResponse = Z(0)
 		LmChallengeResponse = Z(1)
 
 	if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and flags.dict["NEGOTIATE_TARGET_INFO"]:
-		ResponseKeyNT, ResponseKeyLM = NTOWFv2(infos["password"], infos["user"], infos["domain"]), LMOWFv2(infos["password"], infos["user"], infos["domain"])
+		ResponseKeyNT, ResponseKeyLM = NTOWFv2(password, username, domain_name), LMOWFv2(password, username, domain_name)
 
-		temp = NTLMv2_CLIENT_CHALLENGE(infos["target_info"], ClientChallenge).to_bytes()
-		NTProofStr = hmac_md5(ResponseKeyNT, infos["server_challenge"] + temp)
+		temp = NTLMv2_CLIENT_CHALLENGE(target_info, client_challenge).to_bytes()
+		NTProofStr = hmac_md5(ResponseKeyNT, server_challenge + temp)
 
-		NtChallengeResponse = NTProofStr + temp
-		LmChallengeResponse = hmac_md5(ResponseKeyLM, infos["server_challenge"] + ClientChallenge) + ClientChallenge
+		NtChallengeResponse = NTProofStr
+		LmChallengeResponse = hmac_md5(ResponseKeyLM, server_challenge + client_challenge)
 
 		SessionBaseKey = hmac_md5(ResponseKeyNT, NTProofStr)
 
-		return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey)
+		return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey, temp)
 	else:
 		if flags.dict["NEGOTIATE_NTLM"]:
-			ResponseKeyNT, ResponseKeyLM = NTOWFv1(infos["password"]), LMOWFv1(infos["password"])
+			ResponseKeyNT, ResponseKeyLM = NTOWFv1(password), LMOWFv1(password)
 			if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
-				NtChallengeResponse = desl(ResponseKeyNT, md5(infos["server_challenge"] + ClientChallenge)[:8])
-				LmChallengeResponse = ClientChallenge + Z(16)
+				NtChallengeResponse = desl(ResponseKeyNT, md5(server_challenge + client_challenge)[:8])
+				LmChallengeResponse = client_challenge + Z(16)
 			else:
-				NtChallengeResponse = desl(ResponseKeyNT, infos["server_challenge"])
-				LmChallengeResponse = desl(ResponseKeyLM, infos["server_challenge"])
+				NtChallengeResponse = desl(ResponseKeyNT, server_challenge)
+				LmChallengeResponse = desl(ResponseKeyLM, server_challenge)
 
 				if not flags.dict["NEGOTIATE_LM_KEY"]:
 					LmChallengeResponse = NtChallengeResponse
 
 		SessionBaseKey = md4(ResponseKeyNT)
 
-	return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey)
+	return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey, Z(0))
 
-def compute_MIC():
+def compute_MIC(KeyExchangeKey, EncryptedRandomSessionKey, negotiate, challenge, authenticate):
 	if flags.dict["NEGOTIATE_KEY_EXCH"] and (flags.dict["NEGOTIATE_ALWAYS_SIGN"] or flags.dict["NEGOTIATE_SIGN"] or flags.dict["NEGOTIATE_SEAL"]):
 		ExportedSessionKey = rc4k(KeyExchangeKey, EncryptedRandomSessionKey)
 		return hmac_md5(ExportedSessionKey, negotiate + challenge + authenticate)

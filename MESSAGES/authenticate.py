@@ -1,8 +1,9 @@
-from .base import MESSAGE, FIELDS
-from ntlm.utils import nonce, Z
-from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NtLmAuthenticate, MsvAvFlags
+from ntlm.utils import nonce, charset, resolve_infos, Z
+from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NTLM_AUTHENTICATE, MSV_AV_FLAGS
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, RESPONSE, AV_PAIR_LIST
 from ntlm.CRYPTO import rc4k, compute_response, compute_MIC, KXKEY, SIGNKEY, SEALKEY
+
+from .base import MESSAGE, FIELDS
 
 class AUTHENTICATE(MESSAGE):
 	"""
@@ -65,7 +66,7 @@ class AUTHENTICATE(MESSAGE):
 	  includes support for NTLMv2 client challenge structures.
 	- If `NEGOTIATE_KEY_EXCH` and signing or sealing are enabled, the final
 	  session key is encrypted using RC4 and included in the message.
-	- MIC computation is performed only when the AV pair `"MsvAvFlags"` and
+	- MIC computation is performed only when the AV pair `"MSV_AV_FLAGS"` and
 	  `NEGOTIATE_EXTENDED_SESSIONSECURITY` both indicate that it is required.
 	- Offsets for each variable-length structure follow the NTLM specification
 	  and depend on which optional fields (e.g., version) are present.
@@ -73,14 +74,25 @@ class AUTHENTICATE(MESSAGE):
 	  zero-length block (`Z(0)`), matching expected NTLM behavior.
 	"""
 	def __init__(self, flags=NEGOTIATE_FLAGS(0x40000201), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
-		super(AUTHENTICATE, self).__init__(NtLmAuthenticate)
+		super(AUTHENTICATE, self).__init__(NTLM_AUTHENTICATE)
 
-		encoding = super(AUTHENTICATE, self).charset(flags, oem_encoding)
+		encoding = charset(flags, oem_encoding)
+
+		print(infos)
+		data = resolve_infos(flags, infos, encoding)
+		domain_name			= data["domain"]
+		workstation_name	= data["workstation"]
+		username			= data["user"]
+		password			= data["password"]
+		server_challenge	= data["server_challenge"]
+		negotiate_message	= data["negotiate_message"]
+		target_info			= data["target_info"]
+
 		client_challenge = nonce(64)
 
 		if flags.dict["NEGOTIATE_KEY_EXCH"]:
-			LmChallengeResponse, NtChallengeResponse, SessionKey = compute_response(flags, infos, client_challenge)
-			KeyExchangeKey = KXKEY(flags, SessionKey, infos["password"], infos["server_challenge"], LmChallengeResponse)
+			LmChallengeResponse, NtChallengeResponse, SessionKey, temp = compute_response(flags, username, password, domain_name, target_info, server_challenge, client_challenge)
+			KeyExchangeKey = KXKEY(flags, SessionKey, password, server_challenge, LmChallengeResponse)
 			
 			if flags.dict["NEGOTIATE_SIGN"] or flags.dict["NEGOTIATE_SEAL"]:
 				ExportedSessionKey = nonce(128)
@@ -89,8 +101,7 @@ class AUTHENTICATE(MESSAGE):
 				ExportedSessionKey = KeyExchangeKey
 				EncryptedRandomSessionKey = Z(0)
 
-		lm_response, nt_response = RESPONSE(LmChallengeResponse), RESPONSE(NtChallengeResponse)
-		print(EncryptedRandomSessionKey)
+		lm_response, nt_response = RESPONSE(LmChallengeResponse, client_challenge), RESPONSE(NtChallengeResponse, temp)
 
 		offset = 80
 		self.Version = Z(0)
@@ -101,9 +112,9 @@ class AUTHENTICATE(MESSAGE):
 		self.LmChallengeResponseFields, offset = FIELDS(lm_response, offset), offset + len(lm_response)
 		self.NtChallengeResponseFields, offset = FIELDS(nt_response, offset), offset + len(nt_response)
 
-		self.DomainNameFields, offset = FIELDS(infos["domain"], offset), offset + len(infos["domain"])
-		self.UserNameFields, offset = FIELDS(infos["user"], offset), offset + len(infos["user"])
-		self.WorkstationFields, offset = FIELDS(infos["workstation"], offset), offset + len(infos["workstation"])
+		self.DomainNameFields, offset = FIELDS(domain_name, offset), offset + len(domain_name)
+		self.UserNameFields, offset = FIELDS(username, offset), offset + len(username)
+		self.WorkstationFields, offset = FIELDS(workstation_name, offset), offset + len(workstation_name)
 
 		self.EncryptedRandomSessionKeyFields = FIELDS(EncryptedRandomSessionKey, offset)
 
@@ -113,15 +124,15 @@ class AUTHENTICATE(MESSAGE):
 
 		self.Payload += lm_response.to_bytes()
 		self.Payload += nt_response.to_bytes()
-		self.Payload += infos["domain"].encode(encoding)
-		self.Payload += infos["user"].encode(encoding)
-		self.Payload += infos["workstation"].encode(encoding)
+		self.Payload += domain_name
+		self.Payload += username
+		self.Payload += workstation_name
 		self.Payload += EncryptedRandomSessionKey
 
-		if "target_info" in infos:
-			for av_pair in infos["target_info"].av_pairs:
-				if av_pair.av_id == MsvAvFlags and av_pair.value & 0x00000002 and flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
-					self.MIC = compute_MIC(infos["negotiate_message"], infos["server_challenge"], self)
+		if target_info:
+			for av_pair in target_info.av_pairs:
+				if av_pair.av_id == MSV_AV_FLAGS and av_pair.value & 0x00000002 and flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
+					self.MIC = compute_MIC(KeyExchangeKey, EncryptedRandomSessionKey, negotiate_message, server_challenge, self)
 
 		if self.MIC == Z(16):
 			self.MIC = Z(0)

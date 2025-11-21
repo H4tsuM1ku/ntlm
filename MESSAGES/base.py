@@ -1,7 +1,8 @@
-from ntlm.utils import Z
-from ntlm.constants import NUL, NtLmNegotiate, NtLmChallenge, NtLmAuthenticate, MsvAvFlags
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, NTLMv2_CLIENT_CHALLENGE, VERSION
 import struct
+
+from ntlm.utils import Z
+from ntlm.constants import NUL, NTLM_NEGOTIATE, NTLM_CHALLENGE, NTLM_AUTHENTICATE, MSV_AV_FLAGS
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, NTLMv2_CLIENT_CHALLENGE, VERSION
 
 class MESSAGE(object):
 	"""
@@ -21,8 +22,8 @@ class MESSAGE(object):
 	Parameters
 	----------
 	message_type : int, optional
-		The NTLM message type (`NtLmNegotiate`, `NtLmChallenge`,
-		`NtLmAuthenticate`). Determines which fields are initialized.
+		The NTLM message type (`NTLM_NEGOTIATE`, `NTLM_CHALLENGE`,
+		`NTLM_AUTHENTICATE`). Determines which fields are initialized.
 		Defaults to `NUL`.
 
 	Attributes
@@ -66,17 +67,17 @@ class MESSAGE(object):
 		self.Signature = b'NTLMSSP\0'
 		self.MessageType = message_type
 
-		if self.MessageType == NtLmNegotiate:
+		if self.MessageType == NTLM_NEGOTIATE:
 			self.NegotiateFlags		= None
 			self.DomainNameFields	= None
 			self.WorkstationFields	= None
-		elif self.MessageType == NtLmChallenge:
+		elif self.MessageType == NTLM_CHALLENGE:
 			self.TargetNameFields	= None
 			self.NegotiateFlags		= None
 			self.ServerChallenge	= None
 			self.Reserved			= None
 			self.TargetInfoFields	= None
-		elif self.MessageType == NtLmAuthenticate:
+		elif self.MessageType == NTLM_AUTHENTICATE:
 			self.LmChallengeResponseFields			= None
 			self.NtChallengeResponseFields			= None
 			self.DomainNameFields					= None
@@ -87,20 +88,10 @@ class MESSAGE(object):
 
 		self.Version = None
 
-		if self.MessageType == NtLmAuthenticate:
+		if self.MessageType == NTLM_AUTHENTICATE:
 			self.MIC = None
 
 		self.Payload = b""
-
-	def charset(self, flags, oem_encoding):
-		match (flags.dict["NEGOTIATE_UNICODE"], flags.dict["NEGOTIATE_OEM"]):
-			case (1, 1) | (1, 0):
-				encoding = "utf-16-le"
-			case (0, 1):
-				encoding = oem_encoding
-			case (0, 0):
-				raise Exception("SEC_E_INVALID_TOKEN: You need to choose a character set encoding")
-		return encoding
 
 	def display_info(self, obj=None, indent=0):
 		class_objects = [
@@ -133,17 +124,17 @@ class MESSAGE(object):
 		bytes_chunks.append(struct.pack("8s", self.Signature))
 		bytes_chunks.append(struct.pack("<I", self.MessageType))
 
-		if self.MessageType == NtLmNegotiate:
+		if self.MessageType == NTLM_NEGOTIATE:
 			bytes_chunks.append(self.NegotiateFlags.to_bytes())
 			bytes_chunks.append(self.DomainNameFields.to_bytes())
 			bytes_chunks.append(self.WorkstationFields.to_bytes())
-		elif self.MessageType == NtLmChallenge:
+		elif self.MessageType == NTLM_CHALLENGE:
 			bytes_chunks.append(self.TargetNameFields.to_bytes())
 			bytes_chunks.append(self.NegotiateFlags.to_bytes())
 			bytes_chunks.append(self.ServerChallenge)
 			bytes_chunks.append(self.Reserved)
 			bytes_chunks.append(self.TargetInfoFields.to_bytes())
-		elif self.MessageType == NtLmAuthenticate:
+		elif self.MessageType == NTLM_AUTHENTICATE:
 			bytes_chunks.append(self.LmChallengeResponseFields.to_bytes())
 			bytes_chunks.append(self.NtChallengeResponseFields.to_bytes())
 			bytes_chunks.append(self.DomainNameFields.to_bytes())
@@ -155,7 +146,7 @@ class MESSAGE(object):
 		if self.NegotiateFlags & NEGOTIATE_FLAGS.NEGOTIATE_VERSION:
 			bytes_chunks.append(self.Version.to_bytes())
 
-		if self.MessageType == NtLmAuthenticate:
+		if self.MessageType == NTLM_AUTHENTICATE:
 			bytes_chunks.append(self.MIC)
 
 		bytes_chunks.append(struct.pack(f"{len(self.Payload)}s", self.Payload))
@@ -168,19 +159,19 @@ class MESSAGE(object):
 		message.Signature = struct.unpack("8s", message_bytes[:8])[0]
 		message.MessageType = struct.unpack("<I", message_bytes[8:12])[0]
 
-		if message.MessageType == NtLmNegotiate:
+		if message.MessageType == NTLM_NEGOTIATE:
 			message.NegotiateFlags		= NEGOTIATE_FLAGS.from_bytes(message_bytes[12:16])
 			message.DomainNameFields	= FIELDS.from_bytes(message_bytes[16:24])
 			message.WorkstationFields	= FIELDS.from_bytes(message_bytes[24:32])
 			offset = 32
-		elif message.MessageType == NtLmChallenge:
+		elif message.MessageType == NTLM_CHALLENGE:
 			message.TargetNameFields	= FIELDS.from_bytes(message_bytes[12:20])
 			message.NegotiateFlags		= NEGOTIATE_FLAGS.from_bytes(message_bytes[20:24])
 			message.ServerChallenge		= message_bytes[24:32]
 			message.Reserved			= message_bytes[32:40]
 			message.TargetInfoFields	= FIELDS.from_bytes(message_bytes[40:48])
 			offset = 48
-		elif message.MessageType == NtLmAuthenticate:
+		elif message.MessageType == NTLM_AUTHENTICATE:
 			message.LmChallengeResponseFields			= FIELDS.from_bytes(message_bytes[12:20])
 			message.NtChallengeResponseFields			= FIELDS.from_bytes(message_bytes[20:28])
 			message.DomainNameFields					= FIELDS.from_bytes(message_bytes[28:36])
@@ -194,13 +185,14 @@ class MESSAGE(object):
 			message.Version = VERSION.from_bytes(message_bytes[offset:offset+8])
 			offset += 8
 
-		if message.MessageType == NtLmAuthenticate:
+		if message.MessageType == NTLM_AUTHENTICATE:
 			if message.NtChallengeResponseFields.Len > 24:
-				client_challenge = NTLMv2_CLIENT_CHALLENGE.from_bytes(message_bytes[message.NtChallengeResponseFields.BufferOffset+24:])
+				print(message_bytes[message.NtChallengeResponseFields.BufferOffset+16:message.NtChallengeResponseFields.Len])
+				client_challenge = NTLMv2_CLIENT_CHALLENGE.from_bytes(message_bytes[message.NtChallengeResponseFields.BufferOffset+16:message.NtChallengeResponseFields.BufferOffset+message.NtChallengeResponseFields.Len])
 				av_pairs = client_challenge.AvPairs.av_pairs
 
 				for av_pair in av_pairs:
-					if av_pair.av_id == MsvAvFlags and av_pair.value & 0x00000002 and message.NegotiateFlags & NEGOTIATE_FLAGS.NEGOTIATE_EXTENDED_SESSIONSECURITY:
+					if av_pair.av_id == MSV_AV_FLAGS and av_pair.value & 0x00000002 and message.NegotiateFlags & NEGOTIATE_FLAGS.NEGOTIATE_EXTENDED_SESSIONSECURITY:
 						message.MIC = message_bytes[offset:offset+16]
 						offset += 16
 						break

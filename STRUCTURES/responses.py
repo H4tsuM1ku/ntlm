@@ -1,7 +1,8 @@
-from ntlm.utils import nonce, Z
-from ntlm.constants import MsvAvTimestamp
-from ntlm.STRUCTURES import AV_PAIR_LIST
 import struct
+
+from ntlm.utils import nonce, Z
+from ntlm.constants import MSV_AV_TIMESTAMP
+from ntlm.STRUCTURES import AV_PAIR_LIST
 
 class RESPONSE(object):
 	"""
@@ -43,8 +44,9 @@ class RESPONSE(object):
 	- The length of the initial `Response` field (24 bytes) follows the
 	  NTLM specification for LM and NT responses.
 	"""
-	def __init__(self, response=Z(24)):
+	def __init__(self, response=Z(24), challenge=Z(0)):
 		self.Response = response
+		self.ChallengeFromClient = challenge
 
 	def __len__(self):
 		values = [getattr(self, attr) for attr in vars(self)]
@@ -119,7 +121,7 @@ class NTLMv2_CLIENT_CHALLENGE(object):
 	Notes
 	-----
 	- The timestamp (`TimeStamp`) is extracted dynamically from the AV pair
-	  list, specifically from the `MsvAvTimestamp` AV pair if present.
+	  list, specifically from the `MSV_AV_TIMESTAMP` AV pair if present.
 	- The order and layout of fields strictly follow Microsoft's NTLMv2
 	  specification.
 	- This class does not compute the HMAC or proof string; it only models
@@ -132,7 +134,7 @@ class NTLMv2_CLIENT_CHALLENGE(object):
 		self.Reserved2 = Z(4)
 
 		for av_pair in av_list.av_pairs:
-			if av_pair and av_pair.av_id == MsvAvTimestamp:
+			if av_pair and av_pair.av_id == MSV_AV_TIMESTAMP:
 				self.TimeStamp = av_pair.value
 
 		self.ChallengeFromClient = challenge
@@ -161,7 +163,7 @@ class NTLMv2_CLIENT_CHALLENGE(object):
 		ntlmv2_client_challenge.HiRespType = message_bytes[1:2]
 		ntlmv2_client_challenge.Reserved1 = message_bytes[2:4]
 		ntlmv2_client_challenge.Reserved2 = message_bytes[4:8]
-		ntlmv2_client_challenge.TimeStamp = struct.unpack("<Q", message_bytes[8:16])
+		ntlmv2_client_challenge.TimeStamp = struct.unpack("<Q", message_bytes[8:16])[0]
 		ntlmv2_client_challenge.ChallengeFromClient = message_bytes[16:24]
 		ntlmv2_client_challenge.Reserved3 = message_bytes[24:28]
 		ntlmv2_client_challenge.AvPairs = AV_PAIR_LIST.from_bytes(message_bytes[28:])

@@ -1,6 +1,6 @@
-from ntlm.utils import Z
 from Crypto.Cipher import DES, ARC4
 from Crypto.Hash import HMAC, MD5, MD4
+from ntlm.utils import Z
 
 def md4(message):
 	temp = MD4.new()

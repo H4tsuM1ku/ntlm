@@ -1,11 +1,8 @@
-from .base import MESSAGE, FIELDS
-from ntlm.utils import nonce, Z
-from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NtLmChallenge, \
-							MsvAvNbComputerName, MsvAvNbDomainName,\
-							MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName,\
-							MsvAvFlags, MsvAvTimestamp, MsvAvSingleHost, MsvAvTargetName,\
-							MsvAvChannelBindings
+from ntlm.utils import nonce, charset, resolve_infos, Z
+from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NTLM_CHALLENGE
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, AV_PAIR_LIST
+
+from .base import MESSAGE, FIELDS
 
 class CHALLENGE(MESSAGE):
 	"""
@@ -65,15 +62,18 @@ class CHALLENGE(MESSAGE):
 	- The server challenge is generated using a 64-bit nonce.
 	"""
 	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
-		super(CHALLENGE, self).__init__(NtLmChallenge)
+		super(CHALLENGE, self).__init__(NTLM_CHALLENGE)
 
-		encoding = super(CHALLENGE, self).charset(flags, oem_encoding)
+		encoding = charset(flags, oem_encoding)
 
-		target_name = Z(0)
-		if (flags.dict["REQUEST_TARGET"] or flags.dict["TARGET_TYPE_SERVER"] or flags.dict["TARGET_TYPE_DOMAIN"] or flags.dict["TARGET_TYPE_SHARE"]) and len(infos["target"]):
-			target_name = infos["target"].encode(encoding)
-		
-		target_info = AV_PAIR_LIST(infos) if flags.dict["NEGOTIATE_TARGET_INFO"] else AV_PAIR_LIST()
+		print(infos)
+		data = resolve_infos(flags, infos, encoding)
+		domain_name 		= data["domain"]
+		workstation_name	= data["workstation"]
+		target_name 		= data["target"]
+		custom_data			= data["custom_data"]
+
+		target_info = AV_PAIR_LIST(domain_name, workstation_name, target_name, custom_data) if flags.dict["NEGOTIATE_TARGET_INFO"] else AV_PAIR_LIST()
 
 		offset = 48
 		self.Version = Z(0)

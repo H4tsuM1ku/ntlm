@@ -1,6 +1,8 @@
+import struct
+
 from ntlm.constants import NUL
 from ntlm.utils import Z, nonce
-import struct
+
 
 class SINGLE_HOST(object):
 	"""

@@ -20,8 +20,8 @@ def LMOWFv2(password, user, userdom):
 def NTOWFv2(password, user, userdom):
 	NT_hash = NTOWFv1(password) 
 
-	user = user.upper().encode("utf-16-le")
-	userdom = userdom.encode("utf-16-le")
+	user = user.upper()
+	userdom = userdom
 
 	NTv2_hash = hmac_md5(NT_hash, user+userdom)
 

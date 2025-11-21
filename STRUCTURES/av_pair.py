@@ -1,11 +1,13 @@
-from .single_host import SINGLE_HOST
-from ntlm.utils import Z
-from ntlm.constants import NUL, MsvAvEOL, MsvAvNbComputerName, MsvAvNbDomainName,\
-							MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName,\
-							MsvAvFlags, MsvAvTimestamp, MsvAvSingleHost, MsvAvTargetName,\
-							MsvAvChannelBindings
 from datetime import datetime, timezone
 import struct
+
+from ntlm.utils import Z
+from ntlm.constants import NUL, MSV_AV_NB_COMPUTER_NAME, MSV_AV_NB_DOMAIN_NAME, MSV_AV_DNS_COMPUTER_NAME,\
+							MSV_AV_DNS_DOMAIN_NAME, MSV_AV_DNS_TREE_NAME, MSV_AV_FLAGS,\
+							MSV_AV_TIMESTAMP, MSV_AV_SINGLE_HOST, MSV_AV_TARGET_NAME, MSV_AV_CHANNEL_BINDINGS,\
+							MSV_AV_EOL
+
+from .single_host import SINGLE_HOST
 
 class AV_PAIR_LIST(object):
 	"""
@@ -45,43 +47,43 @@ class AV_PAIR_LIST(object):
 
 	Notes
 	-----
-	- An AV pair list always ends with an "End-of-List" (`MsvAvEOL`) entry,
+	- An AV pair list always ends with an "End-of-List" (`MSV_AV_EOL`) entry,
 	  which is automatically added during initialization.
 	- Common AV pairs include:
-		- `MsvAvNbComputerName`
-		- `MsvAvNbDomainName`
-		- `MsvAvDnsComputerName`
-		- `MsvAvDnsDomainName`
-		- `MsvAvDnsTreeName`
-		- `MsvAvFlags`
-		- `MsvAvTimestamp`
-		- `MsvAvSingleHost`
-		- `MsvAvTargetName`
+		- `MSV_AV_NB_COMPUTER_NAME`
+		- `MSV_AV_NB_DOMAIN_NAME`
+		- `MSV_AV_DNS_COMPUTER_NAME`
+		- `MSV_AV_DNS_DOMAIN_NAME`
+		- `MSV_AV_DNS_TREE_NAME`
+		- `MSV_AV_FLAGS`
+		- `MSV_AV_TIMESTAMP`
+		- `MSV_AV_SINGLE_HOST`
+		- `MSV_AV_TARGET_NAME`
 	- The `infos` dictionary values are encoded appropriately when constructing
 	  the AV pairs.
 	- The `to_bytes` method concatenates all AV_PAIR serializations into a
 	  single byte string suitable for inclusion in NTLM messages.
 	"""
-	def __init__(self, infos={}):
+	def __init__(self, domain_name=Z(0), workstation_name=Z(0), target_name=Z(0), custom_data=Z(0)):
 		self.av_pairs = []
 		EOL = False
 
 		av_list = {
-			MsvAvNbComputerName:	infos["workstation"] if "workstation" in infos else Z(0),
-			MsvAvNbDomainName:		infos["domain"].split('.')[0] if "domain" in infos  else Z(0),
-			MsvAvDnsComputerName:	infos["workstation"] + '.' + infos["domain"] if "domain" in infos and "workstation" in infos  else Z(0),
-			MsvAvDnsDomainName:		infos["domain"] if "domain" in infos else Z(0),
-			MsvAvDnsTreeName:		infos["domain"] if "domain" in infos else Z(0),
-			MsvAvFlags:				0,
-			MsvAvTimestamp:			int((datetime.now().timestamp() - datetime(1601, 1, 1, tzinfo=timezone.utc).timestamp()) * 10**7),
-			MsvAvSingleHost:		infos["custom_data"] if "custom_data" in infos else Z(0),
-			MsvAvTargetName:		infos["target"] if "target" in infos else Z(0),
-			#MsvAvChannelBindings:	infos["domain"] if "domain" in infos,
-			MsvAvEOL:				1
+			MSV_AV_NB_COMPUTER_NAME:	workstation_name,
+			MSV_AV_NB_DOMAIN_NAME:		domain_name.split(b'.')[0],
+			MSV_AV_DNS_COMPUTER_NAME:	workstation_name + b'.' + domain_name,
+			MSV_AV_DNS_DOMAIN_NAME:		domain_name,
+			MSV_AV_DNS_TREE_NAME:		domain_name,
+			MSV_AV_FLAGS:				0,
+			MSV_AV_TIMESTAMP:			int((datetime.now().timestamp() - datetime(1601, 1, 1, tzinfo=timezone.utc).timestamp()) * 10**7),
+			MSV_AV_SINGLE_HOST:			custom_data,
+			MSV_AV_TARGET_NAME:			target_name,
+			#MSV_AV_CHANNEL_BINDINGS:	infos["domain"] if "domain" in infos,
+			MSV_AV_EOL:					1
 		}
 
 		for av_id in av_list:
-			if av_id == MsvAvEOL:
+			if av_id == MSV_AV_EOL:
 				EOL = True
 				continue
 
@@ -134,14 +136,14 @@ class AV_PAIR(object):
 	Parameters
 	----------
 	None
-		Instances are initialized with `av_id` set to `MsvAvEOL` (End-of-List)
+		Instances are initialized with `av_id` set to `MSV_AV_EOL` (End-of-List)
 		and an empty value.
 
 	Attributes
 	----------
 	av_id : int
-		Identifier of the AV pair, e.g., `MsvAvNbComputerName`, `MsvAvFlags`,
-		`MsvAvTimestamp`, etc.
+		Identifier of the AV pair, e.g., `MSV_AV_NB_COMPUTER_NAME`, `MSV_AV_FLAGS`,
+		`MSV_AV_TIMESTAMP`, etc.
 	av_len : int
 		Length of the value in bytes.
 	value : bytes or SINGLE_HOST
@@ -169,13 +171,13 @@ class AV_PAIR(object):
 		- Timestamps are 8-byte integers.
 		- SINGLE_HOST is serialized using its `to_bytes()` method.
 		- Channel bindings are currently not implemented.
-	- `MsvAvEOL` marks the end of an AV pair list and typically has
+	- `MSV_AV_EOL` marks the end of an AV pair list and typically has
 	  zero-length value.
 	- The `from_bytes` method correctly slices the input to allow sequential
 	  parsing of multiple AV pairs in a list.
 	"""
 	def __init__(self):
-		self.av_id = MsvAvEOL
+		self.av_id = MSV_AV_EOL
 		self.av_len = NUL
 		self.value = Z(0)
 
@@ -188,19 +190,19 @@ class AV_PAIR(object):
 
 		self.av_id = av_id
 
-		if self.av_id in {MsvAvNbComputerName, MsvAvNbDomainName, MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName, MsvAvTargetName}:
-			self.value = value.encode("utf-16-le")
-			self.av_len = len(self.value)
-		if self.av_id == MsvAvFlags:
+		if self.av_id in {MSV_AV_NB_COMPUTER_NAME, MSV_AV_NB_DOMAIN_NAME, MSV_AV_DNS_COMPUTER_NAME, MSV_AV_DNS_DOMAIN_NAME, MSV_AV_DNS_TREE_NAME, MSV_AV_TARGET_NAME}:
+			self.value = value
+			self.av_len = len(value)
+		if self.av_id == MSV_AV_FLAGS:
 			self.value = value
 			self.av_len = 4
-		if self.av_id == MsvAvTimestamp:
+		if self.av_id == MSV_AV_TIMESTAMP:
 			self.value = value
 			self.av_len = 8
-		if self.av_id == MsvAvSingleHost:
+		if self.av_id == MSV_AV_SINGLE_HOST:
 			self.value = SINGLE_HOST(value)
 			self.av_len = self.value.len()
-		if self.av_id == MsvAvChannelBindings:
+		if self.av_id == MSV_AV_CHANNEL_BINDINGS:
 			pass
 
 		return self
@@ -211,15 +213,15 @@ class AV_PAIR(object):
 		bytes_chunks.append(struct.pack("<H", self.av_id))
 		bytes_chunks.append(struct.pack("<H", self.av_len))
 
-		if self.av_id in {MsvAvNbComputerName, MsvAvNbDomainName, MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName, MsvAvTargetName}:
+		if self.av_id in {MSV_AV_NB_COMPUTER_NAME, MSV_AV_NB_DOMAIN_NAME, MSV_AV_DNS_COMPUTER_NAME, MSV_AV_DNS_DOMAIN_NAME, MSV_AV_DNS_TREE_NAME, MSV_AV_TARGET_NAME}:
 			bytes_chunks.append(struct.pack(f"{self.av_len}s", self.value))
-		if self.av_id == MsvAvFlags:
+		if self.av_id == MSV_AV_FLAGS:
 			bytes_chunks.append(struct.pack(f"<I", self.value))
-		if self.av_id == MsvAvTimestamp:
+		if self.av_id == MSV_AV_TIMESTAMP:
 			bytes_chunks.append(struct.pack("<Q", self.value))
-		if self.av_id == MsvAvSingleHost:
+		if self.av_id == MSV_AV_SINGLE_HOST:
 			bytes_chunks.append(self.value.to_bytes())
-		if self.av_id == MsvAvChannelBindings:
+		if self.av_id == MSV_AV_CHANNEL_BINDINGS:
 			pass
 
 		return b"".join(bytes_chunks)
@@ -232,15 +234,15 @@ class AV_PAIR(object):
 		av_pair.av_len = struct.unpack("<H", message_bytes[2:4])[0]
 
 		value = message_bytes[4:4+av_pair.av_len]
-		if av_pair.av_id in {MsvAvNbComputerName, MsvAvNbDomainName, MsvAvDnsComputerName, MsvAvDnsDomainName, MsvAvDnsTreeName, MsvAvTargetName}:
+		if av_pair.av_id in {MSV_AV_NB_COMPUTER_NAME, MSV_AV_NB_DOMAIN_NAME, MSV_AV_DNS_COMPUTER_NAME, MSV_AV_DNS_DOMAIN_NAME, MSV_AV_DNS_TREE_NAME, MSV_AV_TARGET_NAME}:
 			av_pair.value = struct.unpack(f"{av_pair.av_len}s", value)[0]
-		if av_pair.av_id == MsvAvFlags:
+		if av_pair.av_id == MSV_AV_FLAGS:
 			av_pair.value = struct.unpack(f"<I", value)[0]
-		if av_pair.av_id == MsvAvTimestamp:
+		if av_pair.av_id == MSV_AV_TIMESTAMP:
 			av_pair.value = struct.unpack("<Q", value)[0]
-		if av_pair.av_id == MsvAvSingleHost:
+		if av_pair.av_id == MSV_AV_SINGLE_HOST:
 			av_pair.value = av_pair.value.from_bytes(value)
-		if av_pair.av_id == MsvAvChannelBindings:
+		if av_pair.av_id == MSV_AV_CHANNEL_BINDINGS:
 			pass
 
 		return av_pair, message_bytes[4+av_pair.av_len:]

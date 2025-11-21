@@ -1,7 +1,8 @@
-from .base import MESSAGE, FIELDS
-from ntlm.utils import Z
-from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NtLmNegotiate
+from ntlm.utils import charset, resolve_infos, Z
+from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NTLM_NEGOTIATE
 from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
+
+from .base import MESSAGE, FIELDS
 
 class NEGOTIATE(MESSAGE):
 	"""
@@ -53,12 +54,15 @@ class NEGOTIATE(MESSAGE):
 	  the names based on negotiate flags.
 	"""
 	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
-		super(NEGOTIATE, self).__init__(NtLmNegotiate)
+		super(NEGOTIATE, self).__init__(NTLM_NEGOTIATE)
 
-		encoding = super(NEGOTIATE, self).charset(flags, oem_encoding)
+		encoding = charset(flags, oem_encoding)
 
-		domain_name = infos["domain"].encode(encoding) if flags.dict["NEGOTIATE_OEM_DOMAIN_SUPPLIED"] and len(infos["domain"]) else Z(0)
-		workstation_name = infos["workstation"].encode(encoding) if flags.dict["NEGOTIATE_OEM_WORKSTATION_SUPPLIED"] and len(infos["workstation"]) else Z(0)
+		print(infos)
+		data = resolve_infos(flags, infos, encoding)
+		print(infos)
+		domain_name 		= data["domain"]
+		workstation_name	= data["workstation"]
 
 		self.NegotiateFlags = flags
 
