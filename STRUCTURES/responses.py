@@ -2,7 +2,8 @@ import struct
 
 from ntlm.utils import nonce, Z
 from ntlm.constants import MSV_AV_TIMESTAMP
-from ntlm.STRUCTURES import AV_PAIR_LIST
+
+from .av_pair import AV_PAIR_LIST
 
 class RESPONSE(object):
 	"""

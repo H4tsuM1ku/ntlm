@@ -1,6 +1,6 @@
 from ntlm.utils import charset, resolve_infos, Z
 from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NTLM_NEGOTIATE
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, PAYLOAD
 
 from .base import MESSAGE, FIELDS
 
@@ -58,9 +58,7 @@ class NEGOTIATE(MESSAGE):
 
 		encoding = charset(flags, oem_encoding)
 
-		print(infos)
 		data = resolve_infos(flags, infos, encoding)
-		print(infos)
 		domain_name 		= data["domain"]
 		workstation_name	= data["workstation"]
 
@@ -75,5 +73,6 @@ class NEGOTIATE(MESSAGE):
 		self.DomainNameFields, offset = FIELDS(domain_name, offset), offset + len(domain_name)
 		self.WorkstationFields, offset = FIELDS(workstation_name, offset), offset + len(workstation_name)
 
-		self.Payload += domain_name
-		self.Payload += workstation_name
+		self.Payload = PAYLOAD(NTLM_NEGOTIATE)
+		self.Payload.Domain = domain_name
+		self.Payload.Workstation = workstation_name

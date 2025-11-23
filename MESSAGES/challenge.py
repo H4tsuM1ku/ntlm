@@ -1,6 +1,6 @@
 from ntlm.utils import nonce, charset, resolve_infos, Z
 from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NTLM_CHALLENGE
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, AV_PAIR_LIST
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, AV_PAIR_LIST, PAYLOAD
 
 from .base import MESSAGE, FIELDS
 
@@ -66,7 +66,6 @@ class CHALLENGE(MESSAGE):
 
 		encoding = charset(flags, oem_encoding)
 
-		print(infos)
 		data = resolve_infos(flags, infos, encoding)
 		domain_name 		= data["domain"]
 		workstation_name	= data["workstation"]
@@ -88,5 +87,6 @@ class CHALLENGE(MESSAGE):
 		self.ServerChallenge = nonce(64)
 		self.Reserved = Z(8)
 
-		self.Payload += target_name
-		self.Payload += target_info.to_bytes()
+		self.Payload = PAYLOAD(NTLM_CHALLENGE)
+		self.Payload.Target = target_name
+		self.Payload.TargetInfo = target_info

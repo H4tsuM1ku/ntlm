@@ -2,7 +2,7 @@ import struct
 
 from ntlm.utils import Z
 from ntlm.constants import NUL, NTLM_NEGOTIATE, NTLM_CHALLENGE, NTLM_AUTHENTICATE, MSV_AV_FLAGS
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, NTLMv2_CLIENT_CHALLENGE, VERSION
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, NTLMv2_CLIENT_CHALLENGE, VERSION, PAYLOAD
 
 class MESSAGE(object):
 	"""
@@ -91,14 +91,14 @@ class MESSAGE(object):
 		if self.MessageType == NTLM_AUTHENTICATE:
 			self.MIC = None
 
-		self.Payload = b""
+		self.Payload = None
 
 	def display_info(self, obj=None, indent=0):
 		class_objects = [
 			"NegotiateFlags", "DomainNameFields", "WorkstationFields", 
 			"TargetNameFields", "TargetInfoFields", "LmChallengeResponseFields", 
 			"NtChallengeResponseFields", "UserNameFields", "EncryptedRandomSessionKeyFields",
-			"Version"
+			"Version", "Payload", "TargetInfo", "NtChallenge", "LmChallenge"
 		]
 
 		if obj is None:
@@ -108,10 +108,13 @@ class MESSAGE(object):
 
 		for attr in vars(obj):
 			value = getattr(obj, attr)
-			if not value:
-				continue
 
 			print(f"{prefix}{attr}:", end=" ")
+			
+			if not value:
+				print("None")
+				continue
+
 			if attr in class_objects:
 				print()
 				self.display_info(value, indent + 1)
@@ -149,7 +152,7 @@ class MESSAGE(object):
 		if self.MessageType == NTLM_AUTHENTICATE:
 			bytes_chunks.append(self.MIC)
 
-		bytes_chunks.append(struct.pack(f"{len(self.Payload)}s", self.Payload))
+		bytes_chunks.append(self.Payload.to_bytes(self.MessageType))
 		return b"".join(bytes_chunks)
 
 	@classmethod
@@ -163,6 +166,11 @@ class MESSAGE(object):
 			message.NegotiateFlags		= NEGOTIATE_FLAGS.from_bytes(message_bytes[12:16])
 			message.DomainNameFields	= FIELDS.from_bytes(message_bytes[16:24])
 			message.WorkstationFields	= FIELDS.from_bytes(message_bytes[24:32])
+			
+			fields = [
+				message.DomainNameFields,
+				message.WorkstationFields
+			]
 			offset = 32
 		elif message.MessageType == NTLM_CHALLENGE:
 			message.TargetNameFields	= FIELDS.from_bytes(message_bytes[12:20])
@@ -170,6 +178,11 @@ class MESSAGE(object):
 			message.ServerChallenge		= message_bytes[24:32]
 			message.Reserved			= message_bytes[32:40]
 			message.TargetInfoFields	= FIELDS.from_bytes(message_bytes[40:48])
+
+			fields = [
+				message.TargetNameFields,
+				message.TargetInfoFields
+			]
 			offset = 48
 		elif message.MessageType == NTLM_AUTHENTICATE:
 			message.LmChallengeResponseFields			= FIELDS.from_bytes(message_bytes[12:20])
@@ -179,6 +192,15 @@ class MESSAGE(object):
 			message.WorkstationFields					= FIELDS.from_bytes(message_bytes[44:52])
 			message.EncryptedRandomSessionKeyFields		= FIELDS.from_bytes(message_bytes[52:60])
 			message.NegotiateFlags						= NEGOTIATE_FLAGS.from_bytes(message_bytes[60:64])
+
+			fields = [
+				message.LmChallengeResponseFields,
+				message.NtChallengeResponseFields,
+				message.DomainNameFields,
+				message.UserNameFields,
+				message.WorkstationFields,
+				message.EncryptedRandomSessionKeyFields
+			]
 			offset = 64
 
 		if message.NegotiateFlags & NEGOTIATE_FLAGS.NEGOTIATE_VERSION:
@@ -187,7 +209,6 @@ class MESSAGE(object):
 
 		if message.MessageType == NTLM_AUTHENTICATE:
 			if message.NtChallengeResponseFields.Len > 24:
-				print(message_bytes[message.NtChallengeResponseFields.BufferOffset+16:message.NtChallengeResponseFields.Len])
 				client_challenge = NTLMv2_CLIENT_CHALLENGE.from_bytes(message_bytes[message.NtChallengeResponseFields.BufferOffset+16:message.NtChallengeResponseFields.BufferOffset+message.NtChallengeResponseFields.Len])
 				av_pairs = client_challenge.AvPairs.av_pairs
 
@@ -197,7 +218,7 @@ class MESSAGE(object):
 						offset += 16
 						break
 
-		message.Payload = struct.unpack(f"{len(message_bytes)-offset}s", message_bytes[offset:])[0]
+		message.Payload = PAYLOAD.from_bytes(message.MessageType, message_bytes, fields)
 
 		return message
 

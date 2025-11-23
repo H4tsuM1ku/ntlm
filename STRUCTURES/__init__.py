@@ -18,5 +18,8 @@ def __getattr__(name):
 		case "NTLMv2_CLIENT_CHALLENGE":
 			from .responses import NTLMv2_CLIENT_CHALLENGE	
 			return NTLMv2_CLIENT_CHALLENGE
+		case "PAYLOAD":
+			from .payload import PAYLOAD
+			return PAYLOAD
 
 	raise AttributeError(f"module {__name__} has no attribute {name}")

@@ -1,7 +1,7 @@
 from ntlm.utils import Z
-from ntlm.CRYPTO import LMOWFv1, NTOWFv1, LMOWFv2, NTOWFv2
 from ntlm.STRUCTURES import NTLMv2_CLIENT_CHALLENGE
 
+from .hashing import LMOWFv1, NTOWFv1, LMOWFv2, NTOWFv2
 from .utils import md4, md5, hmac_md5, desl, rc4k
 
 def compute_response(flags, username, password, domain_name, target_info, server_challenge, client_challenge):

@@ -1,6 +1,6 @@
 from ntlm.utils import nonce, charset, resolve_infos, Z
 from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NTLM_AUTHENTICATE, MSV_AV_FLAGS
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, RESPONSE, AV_PAIR_LIST
+from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, RESPONSE, AV_PAIR_LIST, PAYLOAD
 from ntlm.CRYPTO import rc4k, compute_response, compute_MIC, KXKEY, SIGNKEY, SEALKEY
 
 from .base import MESSAGE, FIELDS
@@ -78,7 +78,6 @@ class AUTHENTICATE(MESSAGE):
 
 		encoding = charset(flags, oem_encoding)
 
-		print(infos)
 		data = resolve_infos(flags, infos, encoding)
 		domain_name			= data["domain"]
 		workstation_name	= data["workstation"]
@@ -122,12 +121,13 @@ class AUTHENTICATE(MESSAGE):
 
 		self.MIC = Z(16)
 
-		self.Payload += lm_response.to_bytes()
-		self.Payload += nt_response.to_bytes()
-		self.Payload += domain_name
-		self.Payload += username
-		self.Payload += workstation_name
-		self.Payload += EncryptedRandomSessionKey
+		self.Payload = PAYLOAD(NTLM_AUTHENTICATE)
+		self.Payload.LmChallenge = lm_response
+		self.Payload.NtChallenge = nt_response
+		self.Payload.Domain = domain_name
+		self.Payload.UserName = username
+		self.Payload.Workstation = workstation_name
+		self.Payload.EncryptedRandomSessionKey = EncryptedRandomSessionKey
 
 		if target_info:
 			for av_pair in target_info.av_pairs:

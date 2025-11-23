@@ -1,7 +1,7 @@
 from ntlm.utils import Z
 from ntlm.constants import NTLMSSP_REVISION_W2K3
-from ntlm.CRYPTO import LMOWFv1
 
+from .hashing import LMOWFv1
 from .utils import des, md5, md4, hmac_md5
 
 def KXKEY(flags, SessionBaseKey, password, ServerChallenge, LmChallengeResponse):
