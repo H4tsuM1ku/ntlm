@@ -65,61 +65,58 @@ class AV_PAIR_LIST(object):
 	  single byte string suitable for inclusion in NTLM messages.
 	"""
 	def __init__(self, domain_name=Z(0), workstation_name=Z(0), target_name=Z(0), custom_data=Z(0)):
-		self.av_pairs = []
-		EOL = False
+		self.MsvAvNbComputerName 	= AV_PAIR(MSV_AV_NB_COMPUTER_NAME, workstation_name)
+		self.MsvAvNbDomainName		= AV_PAIR(MSV_AV_NB_DOMAIN_NAME, domain_name.split(b'.')[0])
+		self.MsvAvDnsComputerName	= AV_PAIR(MSV_AV_DNS_COMPUTER_NAME, workstation_name + b'.' + domain_name)
+		self.MsvAvDnsDomainName		= AV_PAIR(MSV_AV_DNS_DOMAIN_NAME, domain_name)
+		self.MsvAvDnsTreeName		= AV_PAIR(MSV_AV_DNS_TREE_NAME, domain_name)
+		self.MsvAvFlags				= AV_PAIR(MSV_AV_FLAGS, 0)
+		self.MsvAvTimestamp			= AV_PAIR(MSV_AV_TIMESTAMP, int((datetime.now().timestamp() - datetime(1601, 1, 1, tzinfo=timezone.utc).timestamp()) * 10**7))
+		
+		if custom_data:
+			self.MsvAvSingleHost	= AV_PAIR(MSV_AV_SINGLE_HOST, custom_data)
+		
+		self.MsvAvTargetName		= AV_PAIR(MSV_AV_TARGET_NAME, target_name)
+		#self.MsvAvChannelBindings	= AV_PAIR(MSV_AV_CHANNEL_BINDINGS, )
+		self.MsvAvEOL				= AV_PAIR()
 
-		av_list = {
-			MSV_AV_NB_COMPUTER_NAME:	workstation_name,
-			MSV_AV_NB_DOMAIN_NAME:		domain_name.split(b'.')[0],
-			MSV_AV_DNS_COMPUTER_NAME:	workstation_name + b'.' + domain_name,
-			MSV_AV_DNS_DOMAIN_NAME:		domain_name,
-			MSV_AV_DNS_TREE_NAME:		domain_name,
-			MSV_AV_FLAGS:				0,
-			MSV_AV_TIMESTAMP:			int((datetime.now().timestamp() - datetime(1601, 1, 1, tzinfo=timezone.utc).timestamp()) * 10**7),
-			MSV_AV_SINGLE_HOST:			custom_data,
-			MSV_AV_TARGET_NAME:			target_name,
-			#MSV_AV_CHANNEL_BINDINGS:	infos["domain"] if "domain" in infos,
-			MSV_AV_EOL:					1
-		}
-
-		for av_id in av_list:
-			if av_id == MSV_AV_EOL:
-				EOL = True
-				continue
-
-			self.add(AV_PAIR().set_av_pair(av_id, av_list[av_id]))
-
-		if EOL:
-			self.add(AV_PAIR())
-
-		self.av_pairs = list(filter(lambda x: x is not None, self.av_pairs))
 
 	def __len__(self):
 		length = 0
-		for packed_av in self.av_pairs:
-			length += len(packed_av)
+
+		values = [getattr(self, attr) for attr in vars(self)]
+		av_pairs = list(filter(lambda x: x is not None, values))
+
+		for av_pair in av_pairs:
+			length += len(av_pair)
 
 		return length
-
-	def add(self, av_pair):
-		self.av_pairs.append(av_pair)
 
 	def to_bytes(self):
 		bytes_chunks = []
 
-		for i, av_pair in enumerate(self.av_pairs):
+		values = [getattr(self, attr) for attr in vars(self)]
+		av_pairs = list(filter(lambda x: x is not None, values))
+
+		for av_pair in av_pairs:
 			bytes_chunks.append(av_pair.to_bytes())
 
 		return b"".join(bytes_chunks)
 
 	@classmethod
 	def from_bytes(cls, message_bytes):
-		av_list = cls()
-		av_list.av_pairs = []
+		av_pair_list = cls()
 
-		while message_bytes:
-			av_pair, message_bytes = AV_PAIR.from_bytes(message_bytes)
-			av_list.add(av_pair)
+		av_pair_list.MsvAvNbComputerName, message_bytes		= AV_PAIR.from_bytes(message_bytes)
+		av_pair_list.MsvAvNbDomainName, message_bytes		= AV_PAIR.from_bytes(message_bytes)
+		av_pair_list.MsvAvDnsComputerName, message_bytes	= AV_PAIR.from_bytes(message_bytes)
+		av_pair_list.MsvAvDnsDomainName, message_bytes		= AV_PAIR.from_bytes(message_bytes)
+		av_pair_list.MsvAvDnsTreeName, message_bytes		= AV_PAIR.from_bytes(message_bytes)
+		av_pair_list.MsvAvFlags, message_bytes				= AV_PAIR.from_bytes(message_bytes)
+		av_pair_list.MsvAvTimestamp, message_bytes			= AV_PAIR.from_bytes(message_bytes)
+		av_pair_list.MsvAvSingleHost, message_bytes			= AV_PAIR.from_bytes(message_bytes)
+		av_pair_list.MsvAvTargetName, message_bytes			= AV_PAIR.from_bytes(message_bytes)
+		av_pair_list.MsvAvEOL, message_bytes				= AV_PAIR.from_bytes(message_bytes)
 
 		return av_list
 
@@ -176,19 +173,10 @@ class AV_PAIR(object):
 	- The `from_bytes` method correctly slices the input to allow sequential
 	  parsing of multiple AV pairs in a list.
 	"""
-	def __init__(self):
-		self.av_id = MSV_AV_EOL
-		self.av_len = NUL
-		self.value = Z(0)
-
-	def __len__(self):
-		return self.av_len
-
-	def set_av_pair(self, av_id, value):
-		if not value:
-			return None
-
+	def __init__(self, av_id=MSV_AV_EOL, value=Z(0)):
 		self.av_id = av_id
+		self.av_len = NUL
+		self.value = value
 
 		if self.av_id in {MSV_AV_NB_COMPUTER_NAME, MSV_AV_NB_DOMAIN_NAME, MSV_AV_DNS_COMPUTER_NAME, MSV_AV_DNS_DOMAIN_NAME, MSV_AV_DNS_TREE_NAME, MSV_AV_TARGET_NAME}:
 			self.value = value
@@ -201,11 +189,12 @@ class AV_PAIR(object):
 			self.av_len = 8
 		if self.av_id == MSV_AV_SINGLE_HOST:
 			self.value = SINGLE_HOST(value)
-			self.av_len = self.value.len()
+			self.av_len = len(self.value)
 		if self.av_id == MSV_AV_CHANNEL_BINDINGS:
 			pass
 
-		return self
+	def __len__(self):
+		return self.av_len
 
 	def to_bytes(self):
 		bytes_chunks = []

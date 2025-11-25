@@ -129,10 +129,7 @@ class AUTHENTICATE(MESSAGE):
 		self.Payload.Workstation = workstation_name
 		self.Payload.EncryptedRandomSessionKey = EncryptedRandomSessionKey
 
-		if target_info:
-			for av_pair in target_info.av_pairs:
-				if av_pair.av_id == MSV_AV_FLAGS and av_pair.value & 0x00000002 and flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
-					self.MIC = compute_MIC(KeyExchangeKey, EncryptedRandomSessionKey, negotiate_message, server_challenge, self)
-
-		if self.MIC == Z(16):
+		if target_info and target_info.MsvAvFlags and target_info.MsvAvFlags.value & 0x00000002 and flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
+			self.MIC = compute_MIC(KeyExchangeKey, EncryptedRandomSessionKey, negotiate_message, server_challenge, self)
+		else:
 			self.MIC = Z(0)

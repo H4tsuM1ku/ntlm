@@ -128,19 +128,15 @@ class NTLMv2_CLIENT_CHALLENGE(object):
 	- This class does not compute the HMAC or proof string; it only models
 	  the internal client challenge block used in the NTLMv2 response.
 	"""
-	def __init__(self, av_list=AV_PAIR_LIST(), challenge=nonce(64)):
+	def __init__(self, target_info=AV_PAIR_LIST(), challenge=nonce(64)):
 		self.RespType = b"\x01"
 		self.HiRespType = b"\x01"
 		self.Reserved1 = Z(2)
 		self.Reserved2 = Z(4)
-
-		for av_pair in av_list.av_pairs:
-			if av_pair and av_pair.av_id == MSV_AV_TIMESTAMP:
-				self.TimeStamp = av_pair.value
-
+		self.TimeStamp = target_info.MsvAvTimestamp.value
 		self.ChallengeFromClient = challenge
 		self.Reserved3 = Z(4)
-		self.AvPairs = av_list
+		self.AvPairs = target_info
 
 	def to_bytes(self):
 		bytes_chunks = []

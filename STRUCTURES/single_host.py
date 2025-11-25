@@ -54,12 +54,12 @@ class SINGLE_HOST(object):
 		self.MachineID = nonce(256)
 
 	def __len__(self):
-		return struct.unpack("<I", self.Size)[0]
+		return self.Size
 
 	def to_bytes(self):
 		bytes_chunks = []
 
-		bytes_chunks.append(struct.unpack("<I", self.Size))
+		bytes_chunks.append(struct.pack("<I", self.Size))
 		bytes_chunks.append(self.Z4)
 		bytes_chunks.append(self.CustomData)
 		bytes_chunks.append(self.MachineID)

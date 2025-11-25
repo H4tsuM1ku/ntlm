@@ -98,7 +98,10 @@ class MESSAGE(object):
 			"NegotiateFlags", "DomainNameFields", "WorkstationFields", 
 			"TargetNameFields", "TargetInfoFields", "LmChallengeResponseFields", 
 			"NtChallengeResponseFields", "UserNameFields", "EncryptedRandomSessionKeyFields",
-			"Version", "Payload", "TargetInfo", "NtChallenge", "LmChallenge"
+			"Version", "Payload", "TargetInfo", "NtChallenge", "LmChallenge", "MsvAvNbComputerName",
+			"MsvAvNbDomainName", "MsvAvDnsComputerName", "MsvAvDnsDomainName", "MsvAvDnsTreeName",
+			"MsvAvFlags", "MsvAvTimestamp", "MsvAvSingleHost", "MsvAvTargetName", "MsvAvChannelBindings",
+			"MsvAvEOL"
 		]
 
 		if obj is None:
