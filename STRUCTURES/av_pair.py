@@ -64,21 +64,37 @@ class AV_PAIR_LIST(object):
 	- The `to_bytes` method concatenates all AV_PAIR serializations into a
 	  single byte string suitable for inclusion in NTLM messages.
 	"""
-	def __init__(self, domain_name=Z(0), workstation_name=Z(0), target_name=Z(0), custom_data=Z(0)):
-		self.MsvAvNbComputerName 	= AV_PAIR(MSV_AV_NB_COMPUTER_NAME, workstation_name)
-		self.MsvAvNbDomainName		= AV_PAIR(MSV_AV_NB_DOMAIN_NAME, domain_name.split(b'.')[0])
-		self.MsvAvDnsComputerName	= AV_PAIR(MSV_AV_DNS_COMPUTER_NAME, workstation_name + b'.' + domain_name)
-		self.MsvAvDnsDomainName		= AV_PAIR(MSV_AV_DNS_DOMAIN_NAME, domain_name)
-		self.MsvAvDnsTreeName		= AV_PAIR(MSV_AV_DNS_TREE_NAME, domain_name)
-		self.MsvAvFlags				= AV_PAIR(MSV_AV_FLAGS, 0)
+	def __init__(self, domain_name=Z(0), workstation_name=Z(0), target_name=Z(0), custom_data=Z(0), flags=Z(0)):
+		self.MsvAvNbComputerName 	= None
+		self.MsvAvNbDomainName		= None
+		self.MsvAvDnsComputerName	= None
+		self.MsvAvDnsDomainName		= None
+		self.MsvAvDnsTreeName		= None
+		self.MsvAvFlags				= None
 		self.MsvAvTimestamp			= AV_PAIR(MSV_AV_TIMESTAMP, int((datetime.now().timestamp() - datetime(1601, 1, 1, tzinfo=timezone.utc).timestamp()) * 10**7))
-		
+		self.MsvAvSingleHost		= None
+		self.MsvAvTargetName		= None
+		#self.MsvAvChannelBindings	= None
+		self.MsvAvEOL				= AV_PAIR()
+
+		if workstation_name:
+			self.MsvAvNbComputerName 	= AV_PAIR(MSV_AV_NB_COMPUTER_NAME, workstation_name)
+
+		if domain_name:
+			self.MsvAvNbDomainName		= AV_PAIR(MSV_AV_NB_DOMAIN_NAME, domain_name.split(b'.')[0])
+			self.MsvAvDnsComputerName	= AV_PAIR(MSV_AV_DNS_COMPUTER_NAME, workstation_name + b'.' + domain_name)
+			self.MsvAvDnsDomainName		= AV_PAIR(MSV_AV_DNS_DOMAIN_NAME, domain_name)
+			self.MsvAvDnsTreeName		= AV_PAIR(MSV_AV_DNS_TREE_NAME, domain_name)
+
+		if flags:
+			self.MsvAvFlags			= AV_PAIR(MSV_AV_FLAGS, flags)
+
 		if custom_data:
 			self.MsvAvSingleHost	= AV_PAIR(MSV_AV_SINGLE_HOST, custom_data)
 		
-		self.MsvAvTargetName		= AV_PAIR(MSV_AV_TARGET_NAME, target_name)
+		if target_name:
+			self.MsvAvTargetName	= AV_PAIR(MSV_AV_TARGET_NAME, target_name)
 		#self.MsvAvChannelBindings	= AV_PAIR(MSV_AV_CHANNEL_BINDINGS, )
-		self.MsvAvEOL				= AV_PAIR()
 
 
 	def __len__(self):
@@ -107,18 +123,33 @@ class AV_PAIR_LIST(object):
 	def from_bytes(cls, message_bytes):
 		av_pair_list = cls()
 
-		av_pair_list.MsvAvNbComputerName, message_bytes		= AV_PAIR.from_bytes(message_bytes)
-		av_pair_list.MsvAvNbDomainName, message_bytes		= AV_PAIR.from_bytes(message_bytes)
-		av_pair_list.MsvAvDnsComputerName, message_bytes	= AV_PAIR.from_bytes(message_bytes)
-		av_pair_list.MsvAvDnsDomainName, message_bytes		= AV_PAIR.from_bytes(message_bytes)
-		av_pair_list.MsvAvDnsTreeName, message_bytes		= AV_PAIR.from_bytes(message_bytes)
-		av_pair_list.MsvAvFlags, message_bytes				= AV_PAIR.from_bytes(message_bytes)
-		av_pair_list.MsvAvTimestamp, message_bytes			= AV_PAIR.from_bytes(message_bytes)
-		av_pair_list.MsvAvSingleHost, message_bytes			= AV_PAIR.from_bytes(message_bytes)
-		av_pair_list.MsvAvTargetName, message_bytes			= AV_PAIR.from_bytes(message_bytes)
-		av_pair_list.MsvAvEOL, message_bytes				= AV_PAIR.from_bytes(message_bytes)
+		while message_bytes:
+			av_pair, message_bytes = AV_PAIR.from_bytes(message_bytes)
 
-		return av_list
+			if av_pair.av_id == MSV_AV_NB_COMPUTER_NAME:
+				av_pair_list.MsvAvNbCompterName = av_pair
+			elif av_pair.av_id == MSV_AV_NB_DOMAIN_NAME:
+				av_pair_list.MsvAvNbDomainName = av_pair
+			elif av_pair.av_id == MSV_AV_DNS_COMPUTER_NAME:
+				av_pair_list.MsvAvDnsComputerName = av_pair
+			elif av_pair.av_id == MSV_AV_DNS_DOMAIN_NAME:
+				av_pair_list.MsvAvDnsDomainName = av_pair
+			elif av_pair.av_id == MSV_AV_DNS_TREE_NAME:
+				av_pair_list.MsvAvDnsTreeName = av_pair
+			elif av_pair.av_id == MSV_AV_FLAGS:
+				av_pair_list.MsvAvFlags = av_pair
+			elif av_pair.av_id == MSV_AV_TIMESTAMP:
+				av_pair_list.MsvAvTimestamp = av_pair
+			elif av_pair.av_id == MSV_AV_SINGLE_HOST:
+				av_pair_list.MsvAvSingleHost = av_pair
+			elif av_pair.av_id == MSV_AV_TARGET_NAME:
+				av_pair_list.MsvAvTargetName = av_pair
+			elif av_pair.av_id == MSV_AV_CHANNEL_BINDINGS:
+				av_pair_list.MsvAvChannelBindings = av_pair
+			elif av_pair.av_id == MSV_AV_EOL:
+				av_pair_list.MsvAvEOL = av_pair
+
+		return av_pair_list
 
 
 class AV_PAIR(object):

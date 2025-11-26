@@ -72,7 +72,9 @@ class CHALLENGE(MESSAGE):
 		target_name 		= data["target"]
 		custom_data			= data["custom_data"]
 
-		target_info = AV_PAIR_LIST(domain_name, workstation_name, target_name, custom_data) if flags.dict["NEGOTIATE_TARGET_INFO"] else AV_PAIR_LIST()
+		target_info = AV_PAIR_LIST()
+		if flags.dict["NEGOTIATE_TARGET_INFO"]:
+			target_info = AV_PAIR_LIST(domain_name, workstation_name, target_name, custom_data)
 
 		offset = 48
 		self.Version = Z(0)
