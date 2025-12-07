@@ -2,10 +2,10 @@ import struct
 
 from ntlm.constants import NUL, NTLM_NEGOTIATE, NTLM_CHALLENGE, NTLM_AUTHENTICATE
 
-from .av_pair import AV_PAIR_LIST
-from .responses import RESPONSE
+from .av_pair import AvPairList
+from .responses import Response
 
-class PAYLOAD(object):
+class Payload(object):
 	def __init__(self, message_type):
 		if message_type == NTLM_NEGOTIATE:
 			self.Domain			= None
@@ -49,10 +49,10 @@ class PAYLOAD(object):
 			payload.Workstation	= message_bytes[fields[1].BufferOffset:fields[1].BufferOffset + fields[1].Len]
 		elif message_type == NTLM_CHALLENGE:
 			payload.Target = message_bytes[fields[0].BufferOffset:fields[0].BufferOffset + fields[0].Len]
-			payload.TargetInfo = AV_PAIR_LIST.from_bytes(message_bytes[fields[1].BufferOffset:fields[1].BufferOffset + fields[1].Len])
+			payload.TargetInfo = AvPairList.from_bytes(message_bytes[fields[1].BufferOffset:fields[1].BufferOffset + fields[1].Len])
 		elif message_type == NTLM_AUTHENTICATE:
-			payload.LmChallenge	= RESPONSE.from_bytes(message_bytes[fields[0].BufferOffset:fields[0].BufferOffset + fields[0].Len])
-			payload.NtChallenge	= RESPONSE.from_bytes(message_bytes[fields[1].BufferOffset:fields[1].BufferOffset + fields[1].Len])
+			payload.LmChallenge	= Response.from_bytes(message_bytes[fields[0].BufferOffset:fields[0].BufferOffset + fields[0].Len])
+			payload.NtChallenge	= Response.from_bytes(message_bytes[fields[1].BufferOffset:fields[1].BufferOffset + fields[1].Len])
 			payload.Domain		= message_bytes[fields[2].BufferOffset:fields[2].BufferOffset + fields[2].Len]
 			payload.UserName	= message_bytes[fields[3].BufferOffset:fields[3].BufferOffset + fields[3].Len]
 			payload.Workstation	= message_bytes[fields[4].BufferOffset:fields[4].BufferOffset + fields[4].Len]

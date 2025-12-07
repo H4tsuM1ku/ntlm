@@ -1,12 +1,12 @@
 from ntlm.utils import charset, resolve_infos, Z
 from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NTLM_NEGOTIATE
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, PAYLOAD
+from ntlm.STRUCTURES import NegotiateFlags, Version, Payload
 
-from .base import MESSAGE, FIELDS
+from .base import Message, Fields
 
-class NEGOTIATE(MESSAGE):
+class Negotiate(Message):
 	"""
-	Represents an NTLM NEGOTIATE message (Type 1), the first message sent
+	Represents an NTLM Negotiate message (Type 1), the first message sent
 	by a client during NTLM authentication.
 
 	This message advertises the client capabilities (negotiate flags),
@@ -15,9 +15,9 @@ class NEGOTIATE(MESSAGE):
 
 	Parameters
 	----------
-	flags : NEGOTIATE_FLAGS, optional
+	flags : NegotiateFlags, optional
 		The set of negotiate flags indicating the client's capabilities.
-		Defaults to `NEGOTIATE_FLAGS(1)`.
+		Defaults to `NegotiateFlags(1)`.
 	infos : dict, optional
 		A dictionary containing `"domain"` and `"workstation"` strings that
 		may be encoded and embedded into the message depending on the flags.
@@ -31,13 +31,13 @@ class NEGOTIATE(MESSAGE):
 
 	Attributes
 	----------
-	NegotiateFlags : NEGOTIATE_FLAGS
+	NegotiateFlags : NegotiateFlags
 		The client's advertised capabilities.
-	DomainNameFields : FIELDS
+	DomainNameFields : Fields
 		Descriptor for the optional domain name.
-	WorkstationFields : FIELDS
+	WorkstationFields : Fields
 		Descriptor for the optional workstation name.
-	Version : VERSION or bytes
+	Version : Version or bytes
 		NTLM version structure if negotiated, otherwise zero-filled bytes.
 	Payload : bytes
 		Concatenation of all variable-length fields (domain and workstation).
@@ -53,8 +53,8 @@ class NEGOTIATE(MESSAGE):
 	- This class automatically selects the correct character encoding for
 	  the names based on negotiate flags.
 	"""
-	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
-		super(NEGOTIATE, self).__init__(NTLM_NEGOTIATE)
+	def __init__(self, flags=NegotiateFlags(1), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
+		super(Negotiate, self).__init__(NTLM_NEGOTIATE)
 
 		encoding = charset(flags, oem_encoding)
 
@@ -67,12 +67,12 @@ class NEGOTIATE(MESSAGE):
 		offset = 32
 		self.Version = Z(0)
 		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version = VERSION(*version_infos, NTLMSSP_REVISION_W2K3)
+			self.Version = Version(*version_infos, NTLMSSP_REVISION_W2K3)
 			offset += 8
 
-		self.DomainNameFields, offset = FIELDS(domain_name, offset), offset + len(domain_name)
-		self.WorkstationFields, offset = FIELDS(workstation_name, offset), offset + len(workstation_name)
+		self.DomainNameFields, offset = Fields(domain_name, offset), offset + len(domain_name)
+		self.WorkstationFields, offset = Fields(workstation_name, offset), offset + len(workstation_name)
 
-		self.Payload = PAYLOAD(NTLM_NEGOTIATE)
+		self.Payload = Payload(NTLM_NEGOTIATE)
 		self.Payload.Domain = domain_name
 		self.Payload.Workstation = workstation_name

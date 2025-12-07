@@ -3,27 +3,27 @@ def __getattr__(name):
 		case "rc4k":
 			from .utils import rc4k
 			return rc4k
-		case "LMOWFv1":
-			from .hashing import LMOWFv1
-			return LMOWFv1
-		case "NTOWFv1":
-			from .hashing import NTOWFv1
-			return NTOWFv1
-		case "LMOWFv2":
-			from .hashing import LMOWFv2
-			return LMOWFv2
-		case "NTOWFv2":
-			from .hashing import NTOWFv2
-			return NTOWFv2
-		case "KXKEY":
-			from .keys import KXKEY
-			return KXKEY
-		case "SIGNKEY":
-			from .keys import SIGNKEY
-			return SIGNKEY
-		case "SEALKEY":
-			from .keys import SEALKEY
-			return SEALKEY
+		case "lmowfv1":
+			from .hashing import lmowfv1
+			return lmowfv1
+		case "ntowfv1":
+			from .hashing import ntowfv1
+			return ntowfv1
+		case "lmowfv2":
+			from .hashing import lmowfv2
+			return lmowfv2
+		case "ntowfv2":
+			from .hashing import ntowfv2
+			return ntowfv2
+		case "kxkey":
+			from .keys import kxkey
+			return kxkey
+		case "sign_key":
+			from .keys import sign_key
+			return sign_key
+		case "seal_key":
+			from .keys import seal_key
+			return seal_key
 		case "compute_response":
 			from .compute import compute_response
 			return compute_response

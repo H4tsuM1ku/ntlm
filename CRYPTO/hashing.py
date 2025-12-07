@@ -1,6 +1,6 @@
 from .utils import des, md4, hmac_md5
 
-def LMOWFv1(password):
+def lmowfv1(password):
 	password = password[:14].ljust(14, '\x00')
 	password = password.upper().encode("ascii")
 
@@ -8,17 +8,17 @@ def LMOWFv1(password):
 
 	return LM_hash
 
-def NTOWFv1(password):
+def ntowfv1(password):
 	password = password.encode("utf-16-le")
 	NT_hash = md4(password)
 
 	return NT_hash
 
-def LMOWFv2(password, user, userdom):
-	return NTOWFv2(password, user, userdom)
+def lmowfv2(password, user, userdom):
+	return NTowfv2(password, user, userdom)
 
-def NTOWFv2(password, user, userdom):
-	NT_hash = NTOWFv1(password) 
+def ntowfv2(password, user, userdom):
+	NT_hash = ntowfv1(password) 
 
 	user = user.upper()
 	userdom = userdom

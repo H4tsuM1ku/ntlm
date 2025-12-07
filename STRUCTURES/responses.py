@@ -3,9 +3,9 @@ import struct
 from ntlm.utils import nonce, Z
 from ntlm.constants import MSV_AV_TIMESTAMP
 
-from .av_pair import AV_PAIR_LIST
+from .av_pair import AvPairList
 
-class RESPONSE(object):
+class Response(object):
 	"""
 	Represents an NTLM response structure such as LM, NT, or NTLMv2 responses.
 
@@ -71,7 +71,7 @@ class RESPONSE(object):
 
 		return response
 
-class NTLMv2_CLIENT_CHALLENGE(object):
+class Ntlmv2ClientChallenge(object):
 	"""
 	Represents an NTLMv2 Client Challenge structure (a component of the
 	NTLMv2 authentication response).
@@ -83,9 +83,9 @@ class NTLMv2_CLIENT_CHALLENGE(object):
 
 	Parameters
 	----------
-	av_list : AV_PAIR_LIST, optional
+	av_list : AvPairList, optional
 		The list of AV pairs to embed inside the challenge structure.
-		Defaults to an empty `AV_PAIR_LIST()`.
+		Defaults to an empty `AvPairList()`.
 	challenge : bytes, optional
 		The 8-byte client challenge (nonce). Defaults to `nonce(64)`,
 		which produces a 64-bit random value.
@@ -107,7 +107,7 @@ class NTLMv2_CLIENT_CHALLENGE(object):
 		The 8-byte client nonce used in NTLMv2 authentication.
 	Reserved3 : bytes
 		Four reserved bytes (zero).
-	AvPairs : AV_PAIR_LIST
+	AvPairs : AvPairList
 		The attribute–value pair list encoding metadata such as domain,
 		workstation, timestamps, flags, etc.
 
@@ -117,7 +117,7 @@ class NTLMv2_CLIENT_CHALLENGE(object):
 		Serializes the NTLMv2 client challenge structure into its binary
 		representation following the NTLMv2 specification.
 	from_bytes(message_bytes):
-		Parses raw bytes into a new `NTLMv2_CLIENT_CHALLENGE` instance.
+		Parses raw bytes into a new `Ntlmv2ClientChallenge` instance.
 
 	Notes
 	-----
@@ -128,7 +128,7 @@ class NTLMv2_CLIENT_CHALLENGE(object):
 	- This class does not compute the HMAC or proof string; it only models
 	  the internal client challenge block used in the NTLMv2 response.
 	"""
-	def __init__(self, target_info=AV_PAIR_LIST(), challenge=nonce(64)):
+	def __init__(self, target_info=AvPairList(), challenge=nonce(64)):
 		self.RespType = b"\x01"
 		self.HiRespType = b"\x01"
 		self.Reserved1 = Z(2)
@@ -163,6 +163,6 @@ class NTLMv2_CLIENT_CHALLENGE(object):
 		ntlmv2_client_challenge.TimeStamp = struct.unpack("<Q", message_bytes[8:16])[0]
 		ntlmv2_client_challenge.ChallengeFromClient = message_bytes[16:24]
 		ntlmv2_client_challenge.Reserved3 = message_bytes[24:28]
-		ntlmv2_client_challenge.AvPairs = AV_PAIR_LIST.from_bytes(message_bytes[28:])
+		ntlmv2_client_challenge.AvPairs = AvPairList.from_bytes(message_bytes[28:])
 
 		return ntlmv2_client_challenge

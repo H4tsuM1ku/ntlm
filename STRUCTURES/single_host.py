@@ -4,7 +4,7 @@ from ntlm.constants import NUL
 from ntlm.utils import Z, nonce
 
 
-class SINGLE_HOST(object):
+class SingleHost(object):
 	"""
 	Represents a single host structure containing machine-specific data.
 
@@ -37,7 +37,7 @@ class SINGLE_HOST(object):
 		Serializes the structure into a contiguous byte string.
 	from_bytes(message_bytes):
 		Class method that parses a binary representation and returns
-		a `SINGLE_HOST` instance.
+		a `SingleHost` instance.
 
 	Notes
 	-----

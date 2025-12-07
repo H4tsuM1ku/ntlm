@@ -3,7 +3,7 @@ import struct
 from ntlm.utils import Z
 from ntlm.constants import NUL
 
-class VERSION(object):
+class Version(object):
 	"""
 	Represents the NTLM version structure, included optionally in NTLM messages
 	when the `NEGOTIATE_VERSION` flag is set.

@@ -1,12 +1,12 @@
 from ntlm.utils import nonce, charset, resolve_infos, Z
 from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NTLM_CHALLENGE
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, AV_PAIR_LIST, PAYLOAD
+from ntlm.STRUCTURES import NegotiateFlags, Version, AvPairList, Payload
 
-from .base import MESSAGE, FIELDS
+from .base import Message, Fields
 
-class CHALLENGE(MESSAGE):
+class Challenge(Message):
 	"""
-	Represents an NTLM CHALLENGE message (Type 2), sent by the server
+	Represents an NTLM Challenge message (Type 2), sent by the server
 	after receiving a NEGOTIATE message from the client.
 
 	This message communicates the server challenge, target information,
@@ -15,11 +15,11 @@ class CHALLENGE(MESSAGE):
 
 	Parameters
 	----------
-	flags : NEGOTIATE_FLAGS, optional
+	flags : NegotiateFlags, optional
 		The negotiate flags chosen by the server for this authentication
 		exchange. These determine whether fields such as target name,
 		target info, and version information will be included.
-		Defaults to `NEGOTIATE_FLAGS(1)`.
+		Defaults to `NegotiateFlags(1)`.
 	infos : dict, optional
 		Dictionary containing optional `"target"` metadata used to build
 		the AV pair list and target name fields. Defaults to `DEFAULT_INFOS`.
@@ -32,18 +32,18 @@ class CHALLENGE(MESSAGE):
 
 	Attributes
 	----------
-	NegotiateFlags : NEGOTIATE_FLAGS
+	NegotiateFlags : NegotiateFlags
 		Security and capability flags selected by the server.
 	ServerChallenge : bytes
 		An 8-byte random challenge used in NTLM authentication.
 	Reserved : bytes
 		Eight reserved bytes required by the NTLM specification.
-	TargetNameFields : FIELDS
+	TargetNameFields : Fields
 		Descriptor for the server target name (domain, computer, or share),
 		if supplied.
-	TargetInfoFields : FIELDS
+	TargetInfoFields : Fields
 		Descriptor for the AV pair list containing additional server metadata.
-	Version : VERSION or bytes
+	Version : Version or bytes
 		NTLM version block if negotiated, otherwise zero-filled bytes.
 	Payload : bytes
 		Payload containing the target name and target information structures.
@@ -61,8 +61,8 @@ class CHALLENGE(MESSAGE):
 	  included in the message.
 	- The server challenge is generated using a 64-bit nonce.
 	"""
-	def __init__(self, flags=NEGOTIATE_FLAGS(1), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
-		super(CHALLENGE, self).__init__(NTLM_CHALLENGE)
+	def __init__(self, flags=NegotiateFlags(1), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
+		super(Challenge, self).__init__(NTLM_CHALLENGE)
 
 		encoding = charset(flags, oem_encoding)
 
@@ -72,23 +72,23 @@ class CHALLENGE(MESSAGE):
 		target_name 		= data["target"]
 		custom_data			= data["custom_data"]
 
-		target_info = AV_PAIR_LIST()
+		target_info = AvPairList()
 		if flags.dict["NEGOTIATE_TARGET_INFO"]:
-			target_info = AV_PAIR_LIST(domain_name, workstation_name, target_name, custom_data)
+			target_info = AvPairList(domain_name, workstation_name, target_name, custom_data)
 
 		offset = 48
 		self.Version = Z(0)
 		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version = VERSION(*version_infos, NTLMSSP_REVISION_W2K3)
+			self.Version = Version(*version_infos, NTLMSSP_REVISION_W2K3)
 			offset += 8
 
-		self.TargetNameFields, offset = FIELDS(target_name, offset), offset + len(target_name)
-		self.TargetInfoFields, offset = FIELDS(target_info, offset), offset + len(target_info)
+		self.TargetNameFields, offset = Fields(target_name, offset), offset + len(target_name)
+		self.TargetInfoFields, offset = Fields(target_info, offset), offset + len(target_info)
 
 		self.NegotiateFlags = flags
 		self.ServerChallenge = nonce(64)
 		self.Reserved = Z(8)
 
-		self.Payload = PAYLOAD(NTLM_CHALLENGE)
+		self.Payload = Payload(NTLM_CHALLENGE)
 		self.Payload.Target = target_name
 		self.Payload.TargetInfo = target_info

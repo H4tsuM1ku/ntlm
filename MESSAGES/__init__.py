@@ -1,13 +1,13 @@
 def __getattr__(name):
 	match name:
-		case "NEGOTIATE":
-			from .negotiate import NEGOTIATE
-			return NEGOTIATE
-		case "CHALLENGE":
-			from .challenge import CHALLENGE
-			return CHALLENGE
-		case "AUTHENTICATE":
-			from .authenticate import AUTHENTICATE
-			return AUTHENTICATE
+		case "Negotiate":
+			from .negotiate import Negotiate
+			return Negotiate
+		case "Challenge":
+			from .challenge import Challenge
+			return Challenge
+		case "Authenticate":
+			from .authenticate import Authenticate
+			return Authenticate
 
 	raise AttributeError(f"module {__name__} has no attribute {name}")

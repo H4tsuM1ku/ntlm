@@ -2,9 +2,9 @@ import struct
 
 from ntlm.utils import Z
 from ntlm.constants import NUL, NTLM_NEGOTIATE, NTLM_CHALLENGE, NTLM_AUTHENTICATE, MSV_AV_FLAGS
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, NTLMv2_CLIENT_CHALLENGE, VERSION, PAYLOAD
+from ntlm.STRUCTURES import NegotiateFlags, Ntlmv2ClientChallenge, Version, Payload
 
-class MESSAGE(object):
+class Message(object):
 	"""
 	Represents an NTLM message structure capable of serializing and
 	deserializing NTLM NEGOTIATE, CHALLENGE, and AUTHENTICATE messages.
@@ -57,9 +57,9 @@ class MESSAGE(object):
 	Notes
 	-----
 	- The field layout depends heavily on the message type and on negotiated
-	  flags such as `NEGOTIATE_VERSION` and `NEGOTIATE_EXTENDED_SESSIONSECURITY`.
-	- This class relies on helper structures such as `FIELDS`,
-	  `NEGOTIATE_FLAGS`, and `VERSION` to parse or serialize each section.
+	  flags such as `NEGOTIATE_Version` and `NEGOTIATE_EXTENDED_SESSIONSECURITY`.
+	- This class relies on helper structures such as `Fields`,
+	  `NegotiateFlags`, and `Version` to parse or serialize each section.
 	- MIC extraction for NTLMv2 is performed conditionally based on the
 	  values of the AV pairs and security flags.
 	"""
@@ -149,7 +149,7 @@ class MESSAGE(object):
 			bytes_chunks.append(self.EncryptedRandomSessionKeyFields.to_bytes())
 			bytes_chunks.append(self.NegotiateFlags.to_bytes())
 
-		if self.NegotiateFlags & NEGOTIATE_FLAGS.NEGOTIATE_VERSION:
+		if self.NegotiateFlags & NegotiateFlags.NEGOTIATE_Version:
 			bytes_chunks.append(self.Version.to_bytes())
 
 		if self.MessageType == NTLM_AUTHENTICATE:
@@ -166,9 +166,9 @@ class MESSAGE(object):
 		message.MessageType = struct.unpack("<I", message_bytes[8:12])[0]
 
 		if message.MessageType == NTLM_NEGOTIATE:
-			message.NegotiateFlags		= NEGOTIATE_FLAGS.from_bytes(message_bytes[12:16])
-			message.DomainNameFields	= FIELDS.from_bytes(message_bytes[16:24])
-			message.WorkstationFields	= FIELDS.from_bytes(message_bytes[24:32])
+			message.NegotiateFlags		= NegotiateFlags.from_bytes(message_bytes[12:16])
+			message.DomainNameFields	= Fields.from_bytes(message_bytes[16:24])
+			message.WorkstationFields	= Fields.from_bytes(message_bytes[24:32])
 			
 			fields = [
 				message.DomainNameFields,
@@ -176,11 +176,11 @@ class MESSAGE(object):
 			]
 			offset = 32
 		elif message.MessageType == NTLM_CHALLENGE:
-			message.TargetNameFields	= FIELDS.from_bytes(message_bytes[12:20])
-			message.NegotiateFlags		= NEGOTIATE_FLAGS.from_bytes(message_bytes[20:24])
+			message.TargetNameFields	= Fields.from_bytes(message_bytes[12:20])
+			message.NegotiateFlags		= NegotiateFlags.from_bytes(message_bytes[20:24])
 			message.ServerChallenge		= message_bytes[24:32]
 			message.Reserved			= message_bytes[32:40]
-			message.TargetInfoFields	= FIELDS.from_bytes(message_bytes[40:48])
+			message.TargetInfoFields	= Fields.from_bytes(message_bytes[40:48])
 
 			fields = [
 				message.TargetNameFields,
@@ -188,13 +188,13 @@ class MESSAGE(object):
 			]
 			offset = 48
 		elif message.MessageType == NTLM_AUTHENTICATE:
-			message.LmChallengeResponseFields			= FIELDS.from_bytes(message_bytes[12:20])
-			message.NtChallengeResponseFields			= FIELDS.from_bytes(message_bytes[20:28])
-			message.DomainNameFields					= FIELDS.from_bytes(message_bytes[28:36])
-			message.UserNameFields						= FIELDS.from_bytes(message_bytes[36:44])
-			message.WorkstationFields					= FIELDS.from_bytes(message_bytes[44:52])
-			message.EncryptedRandomSessionKeyFields		= FIELDS.from_bytes(message_bytes[52:60])
-			message.NegotiateFlags						= NEGOTIATE_FLAGS.from_bytes(message_bytes[60:64])
+			message.LmChallengeResponseFields			= Fields.from_bytes(message_bytes[12:20])
+			message.NtChallengeResponseFields			= Fields.from_bytes(message_bytes[20:28])
+			message.DomainNameFields					= Fields.from_bytes(message_bytes[28:36])
+			message.UserNameFields						= Fields.from_bytes(message_bytes[36:44])
+			message.WorkstationFields					= Fields.from_bytes(message_bytes[44:52])
+			message.EncryptedRandomSessionKeyFields		= Fields.from_bytes(message_bytes[52:60])
+			message.NegotiateFlags						= NegotiateFlags.from_bytes(message_bytes[60:64])
 
 			fields = [
 				message.LmChallengeResponseFields,
@@ -206,26 +206,26 @@ class MESSAGE(object):
 			]
 			offset = 64
 
-		if message.NegotiateFlags & NEGOTIATE_FLAGS.NEGOTIATE_VERSION:
-			message.Version = VERSION.from_bytes(message_bytes[offset:offset+8])
+		if message.NegotiateFlags & NegotiateFlags.NEGOTIATE_Version:
+			message.Version = Version.from_bytes(message_bytes[offset:offset+8])
 			offset += 8
 
 		if message.MessageType == NTLM_AUTHENTICATE:
 			if message.NtChallengeResponseFields.Len > 24:
-				client_challenge = NTLMv2_CLIENT_CHALLENGE.from_bytes(message_bytes[message.NtChallengeResponseFields.BufferOffset+16:message.NtChallengeResponseFields.BufferOffset+message.NtChallengeResponseFields.Len])
+				client_challenge = Ntlmv2ClientChallenge.from_bytes(message_bytes[message.NtChallengeResponseFields.BufferOffset+16:message.NtChallengeResponseFields.BufferOffset+message.NtChallengeResponseFields.Len])
 				av_pairs = client_challenge.AvPairs.av_pairs
 
 				for av_pair in av_pairs:
-					if av_pair.av_id == MSV_AV_FLAGS and av_pair.value & 0x00000002 and message.NegotiateFlags & NEGOTIATE_FLAGS.NEGOTIATE_EXTENDED_SESSIONSECURITY:
+					if av_pair.av_id == MSV_AV_FLAGS and av_pair.value & 0x00000002 and message.NegotiateFlags & NegotiateFlags.NEGOTIATE_EXTENDED_SESSIONSECURITY:
 						message.MIC = message_bytes[offset:offset+16]
 						offset += 16
 						break
 
-		message.Payload = PAYLOAD.from_bytes(message.MessageType, message_bytes, fields)
+		message.Payload = Payload.from_bytes(message.MessageType, message_bytes, fields)
 
 		return message
 
-class FIELDS(object):
+class Fields(object):
 	"""
 	Represents a serializable field descriptor containing length and offset
 	metadata, intended to be converted to and from a binary format.

@@ -45,11 +45,9 @@ def adjust_key_parity(input_key):
 	key = []
 
 	for i in range(8):
-		if i == 0:
-			key.append(input_key[i] & 0xFE)
-		elif i == 7:
-			key.append((input_key[i-1] << 1) & 0xFE)
+		if i == 0 or i == 7:
+			key.append((input_key[i] << -i%8) & 0xFE)
 		else:
-			key.append(((input_key[i-1] << (8-i) ) | (input_key[i] >> i)) & 0xFE)
+			key.append(((input_key[i-1] << -i%8) | (input_key[i] >> i)) & 0xFE)
 
 	return bytes(key)

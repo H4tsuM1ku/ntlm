@@ -11,7 +11,7 @@ from ntlm.constants import NTLMSSP_NEGOTIATE_56, NTLMSSP_NEGOTIATE_KEY_EXCH, NTL
 							NTLMSSP_NEGOTIATE_SEAL, NTLMSSP_NEGOTIATE_SIGN, NTLMSSP_REQUEST_TARGET, \
 							NTLMSSP_NEGOTIATE_OEM, NTLMSSP_NEGOTIATE_UNICODE
 
-class NEGOTIATE_FLAGS(IntFlag):
+class NegotiateFlags(IntFlag):
 	"""
 	Represents the set of NTLM Negotiate Flags, as defined in the
 	NTLMSSP (NT LAN Manager Security Support Provider) specification.
@@ -172,11 +172,11 @@ class NEGOTIATE_FLAGS(IntFlag):
 		Cached property returning a dictionary mapping flag names to
 		boolean (0 or 1) indicating whether each flag is set.
 	clear():
-		Returns an empty `NEGOTIATE_FLAGS` instance with all bits cleared.
+		Returns an empty `NegotiateFlags` instance with all bits cleared.
 	to_bytes():
 		Serializes the flags into a 4-byte little-endian integer.
 	from_bytes(message_bytes):
-		Reconstructs a `NEGOTIATE_FLAGS` instance from a 4-byte integer.
+		Reconstructs a `NegotiateFlags` instance from a 4-byte integer.
 
 	Notes
 	-----
@@ -213,10 +213,10 @@ class NEGOTIATE_FLAGS(IntFlag):
 
 	@cached_property
 	def dict(self):
-		return {flag.name: (1 if flag & self else 0) for flag in NEGOTIATE_FLAGS}
+		return {flag.name: (1 if flag & self else 0) for flag in NegotiateFlags}
 
 	def clear(self):
-		return NEGOTIATE_FLAGS(NUL)
+		return NegotiateFlags(NUL)
 
 	def to_bytes(self):
 		return struct.pack("<I", self)

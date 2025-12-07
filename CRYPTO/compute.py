@@ -1,7 +1,7 @@
 from ntlm.utils import Z
-from ntlm.STRUCTURES import NTLMv2_CLIENT_CHALLENGE
+from ntlm.STRUCTURES import Ntlmv2ClientChallenge
 
-from .hashing import LMOWFv1, NTOWFv1, LMOWFv2, NTOWFv2
+from .hashing import lmowfv1, ntowfv1, lmowfv2, ntowfv2
 from .utils import md4, md5, hmac_md5, desl, rc4k
 
 def compute_response(flags, username, password, domain_name, target_info, server_challenge, client_challenge):
@@ -10,9 +10,9 @@ def compute_response(flags, username, password, domain_name, target_info, server
 		LmChallengeResponse = Z(1)
 
 	if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"] and flags.dict["NEGOTIATE_TARGET_INFO"]:
-		ResponseKeyNT, ResponseKeyLM = NTOWFv2(password, username, domain_name), LMOWFv2(password, username, domain_name)
+		ResponseKeyNT, ResponseKeyLM = ntowfv2(password, username, domain_name), lmowfv2(password, username, domain_name)
 
-		temp = NTLMv2_CLIENT_CHALLENGE(target_info, client_challenge).to_bytes()
+		temp = Ntlmv2ClientChallenge(target_info, client_challenge).to_bytes()
 		NTProofStr = hmac_md5(ResponseKeyNT, server_challenge + temp)
 
 		NtChallengeResponse = NTProofStr
@@ -23,7 +23,7 @@ def compute_response(flags, username, password, domain_name, target_info, server
 		return (LmChallengeResponse, NtChallengeResponse, SessionBaseKey, temp)
 	else:
 		if flags.dict["NEGOTIATE_NTLM"]:
-			ResponseKeyNT, ResponseKeyLM = NTOWFv1(password), LMOWFv1(password)
+			ResponseKeyNT, ResponseKeyLM = ntowfv1(password), lmowfv1(password)
 			if flags.dict["NEGOTIATE_EXTENDED_SESSIONSECURITY"]:
 				NtChallengeResponse = desl(ResponseKeyNT, md5(server_challenge + client_challenge)[:8])
 				LmChallengeResponse = client_challenge + Z(16)

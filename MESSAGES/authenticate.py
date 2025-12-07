@@ -1,13 +1,13 @@
 from ntlm.utils import nonce, charset, resolve_infos, Z
 from ntlm.constants import DEFAULT_INFOS, NUL, NTLMSSP_REVISION_W2K3, NTLM_AUTHENTICATE, MSV_AV_FLAGS
-from ntlm.STRUCTURES import NEGOTIATE_FLAGS, VERSION, RESPONSE, AV_PAIR_LIST, PAYLOAD
-from ntlm.CRYPTO import rc4k, compute_response, compute_MIC, KXKEY, SIGNKEY, SEALKEY
+from ntlm.STRUCTURES import NegotiateFlags, Version, Response, AvPairList, Payload
+from ntlm.CRYPTO import rc4k, compute_response, compute_MIC, kxkey, sign_key, seal_key
 
-from .base import MESSAGE, FIELDS
+from .base import Message, Fields
 
-class AUTHENTICATE(MESSAGE):
+class Authenticate(Message):
 	"""
-	Represents an NTLM AUTHENTICATE message (Type 3), the final message
+	Represents an NTLM Authenticate message (Type 3), the final message
 	sent by the client during the NTLM authentication handshake.
 
 	This message contains the client's authentication material, including
@@ -17,11 +17,11 @@ class AUTHENTICATE(MESSAGE):
 
 	Parameters
 	----------
-	flags : NEGOTIATE_FLAGS, optional
+	flags : NegotiateFlags, optional
 		The negotiate flags negotiated during the NTLM handshake.
 		These flags determine which cryptographic operations are performed
 		and which fields are included in the message.
-		Defaults to `NEGOTIATE_FLAGS(0x40000201)`.
+		Defaults to `NegotiateFlags(0x40000201)`.
 	infos : dict, optional
 		A dictionary of user, domain, workstation, and server details
 		required for response computation. Expected keys include:
@@ -30,7 +30,7 @@ class AUTHENTICATE(MESSAGE):
 		`"target_info"`. Defaults to `DEFAULT_INFOS`.
 	version_infos : tuple, optional
 		Tuple containing (major_version, minor_version, build_number).
-		Used only when the `NEGOTIATE_VERSION` flag is set.
+		Used only when the `NEGOTIATE_Version` flag is set.
 		Defaults to `(NUL, NUL, NUL)`.
 	oem_encoding : str, optional
 		OEM codepage used when Unicode is not negotiated.
@@ -38,20 +38,20 @@ class AUTHENTICATE(MESSAGE):
 
 	Attributes
 	----------
-	LmChallengeResponseFields : FIELDS
+	LmChallengeResponseFields : Fields
 		Descriptor for the LM challenge response structure.
-	NtChallengeResponseFields : FIELDS
+	NtChallengeResponseFields : Fields
 		Descriptor for the NT challenge response (often NTLMv2).
-	DomainNameFields : FIELDS
+	DomainNameFields : Fields
 		Descriptor for the domain name.
-	UserNameFields : FIELDS
+	UserNameFields : Fields
 		Descriptor for the username.
-	WorkstationFields : FIELDS
+	WorkstationFields : Fields
 		Descriptor for the workstation name.
-	EncryptedRandomSessionKeyFields : FIELDS
+	EncryptedRandomSessionKeyFields : Fields
 		Descriptor for the encrypted session key, included only when
 		key exchange and signing/sealing are negotiated.
-	Version : VERSION or bytes
+	Version : Version or bytes
 		NTLM version structure when negotiated; zero-filled otherwise.
 	MIC : bytes
 		The Message Integrity Code computed in NTLMv2 when required by
@@ -73,8 +73,8 @@ class AUTHENTICATE(MESSAGE):
 	- If the MIC remains uninitialized (all zeros), it is replaced with a
 	  zero-length block (`Z(0)`), matching expected NTLM behavior.
 	"""
-	def __init__(self, flags=NEGOTIATE_FLAGS(0x40000201), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
-		super(AUTHENTICATE, self).__init__(NTLM_AUTHENTICATE)
+	def __init__(self, flags=NegotiateFlags(0x40000201), infos=DEFAULT_INFOS, version_infos=(NUL, NUL, NUL), oem_encoding="cp850"):
+		super(Authenticate, self).__init__(NTLM_AUTHENTICATE)
 
 		encoding = charset(flags, oem_encoding)
 
@@ -91,7 +91,7 @@ class AUTHENTICATE(MESSAGE):
 
 		if flags.dict["NEGOTIATE_KEY_EXCH"]:
 			LmChallengeResponse, NtChallengeResponse, SessionKey, temp = compute_response(flags, username, password, domain_name, target_info, server_challenge, client_challenge)
-			KeyExchangeKey = KXKEY(flags, SessionKey, password, server_challenge, LmChallengeResponse)
+			KeyExchangeKey = kxkey(flags, SessionKey, password, server_challenge, LmChallengeResponse)
 			
 			if flags.dict["NEGOTIATE_SIGN"] or flags.dict["NEGOTIATE_SEAL"]:
 				ExportedSessionKey = nonce(128)
@@ -100,28 +100,28 @@ class AUTHENTICATE(MESSAGE):
 				ExportedSessionKey = KeyExchangeKey
 				EncryptedRandomSessionKey = Z(0)
 
-		lm_response, nt_response = RESPONSE(LmChallengeResponse, client_challenge), RESPONSE(NtChallengeResponse, temp)
+		lm_response, nt_response = Response(LmChallengeResponse, client_challenge), Response(NtChallengeResponse, temp)
 
 		offset = 80
 		self.Version = Z(0)
-		if flags.dict["NEGOTIATE_VERSION"]:
-			self.Version = VERSION(*version_infos, NTLMSSP_REVISION_W2K3)
+		if flags.dict["NEGOTIATE_Version"]:
+			self.Version = Version(*version_infos, NTLMSSP_REVISION_W2K3)
 			offset += 8
 	
-		self.LmChallengeResponseFields, offset = FIELDS(lm_response, offset), offset + len(lm_response)
-		self.NtChallengeResponseFields, offset = FIELDS(nt_response, offset), offset + len(nt_response)
+		self.LmChallengeResponseFields, offset = Fields(lm_response, offset), offset + len(lm_response)
+		self.NtChallengeResponseFields, offset = Fields(nt_response, offset), offset + len(nt_response)
 
-		self.DomainNameFields, offset = FIELDS(domain_name, offset), offset + len(domain_name)
-		self.UserNameFields, offset = FIELDS(username, offset), offset + len(username)
-		self.WorkstationFields, offset = FIELDS(workstation_name, offset), offset + len(workstation_name)
+		self.DomainNameFields, offset = Fields(domain_name, offset), offset + len(domain_name)
+		self.UserNameFields, offset = Fields(username, offset), offset + len(username)
+		self.WorkstationFields, offset = Fields(workstation_name, offset), offset + len(workstation_name)
 
-		self.EncryptedRandomSessionKeyFields = FIELDS(EncryptedRandomSessionKey, offset)
+		self.EncryptedRandomSessionKeyFields = Fields(EncryptedRandomSessionKey, offset)
 
 		self.NegotiateFlags = flags
 
 		self.MIC = Z(16)
 
-		self.Payload = PAYLOAD(NTLM_AUTHENTICATE)
+		self.Payload = Payload(NTLM_AUTHENTICATE)
 		self.Payload.LmChallenge = lm_response
 		self.Payload.NtChallenge = nt_response
 		self.Payload.Domain = domain_name
